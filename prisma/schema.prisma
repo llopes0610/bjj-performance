@@ -138,6 +138,29 @@ enum ExerciseEquipment {
   TREADMILL
 }
 
+enum TrainingProgramStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum WorkoutType {
+  STRENGTH
+  CONDITIONING
+  RECOVERY
+  MIXED
+}
+
+enum WorkoutExerciseBlock {
+  ACTIVATION
+  MAIN
+  ACCESSORY
+  CORE
+  GRIP
+  CONDITIONING
+  MOBILITY
+}
+
 model User {
   id       String  @id @default(cuid())
   email    String  @unique
@@ -181,6 +204,7 @@ model AthleteProfile {
   goals TrainingGoal[]
 
   trainingPreferences TrainingPreference[]
+  trainingPrograms    TrainingProgram[]
 
   currentLevel Int @default(1)
   currentXp    Int @default(0)
@@ -247,6 +271,7 @@ model Exercise {
 
   secondaryRegions BodyRegion[]
   equipment        ExerciseEquipment[]
+  workoutExercises WorkoutExercise[]
 
   instructions String[]
   commonErrors String[]
@@ -280,4 +305,94 @@ model ExerciseAlternative {
   reason String?
 
   @@unique([exerciseId, alternativeId])
+}
+
+model TrainingProgram {
+  id        String @id @default(cuid())
+  athleteId String
+
+  athlete AthleteProfile @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  name        String
+  phase       String
+  description String?
+
+  durationWeeks Int
+  currentWeek   Int @default(1)
+
+  status TrainingProgramStatus @default(ACTIVE)
+
+  recommendedStrengthDays Int
+
+  baseRpeMin Float
+  baseRpeMax Float
+
+  startedAt DateTime  @default(now())
+  endsAt    DateTime?
+
+  workouts Workout[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([athleteId, status])
+}
+
+model Workout {
+  id        String @id @default(cuid())
+  programId String
+
+  program TrainingProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  code String
+  name String
+
+  description String?
+
+  type WorkoutType @default(STRENGTH)
+
+  order Int
+
+  estimatedDurationMinutes Int
+
+  exercises WorkoutExercise[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([programId, code])
+  @@index([programId, order])
+}
+
+model WorkoutExercise {
+  id         String @id @default(cuid())
+  workoutId  String
+  exerciseId String
+
+  workout  Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+
+  block WorkoutExerciseBlock
+
+  order Int
+
+  sets Int
+
+  repsMin Int?
+  repsMax Int?
+
+  durationSeconds Int?
+  distanceMeters  Int?
+
+  restSeconds Int
+
+  targetRpe Float?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workoutId, order])
+  @@index([exerciseId])
 }
