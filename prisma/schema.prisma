@@ -32,34 +32,6 @@ enum TrainingGoal {
   INJURY_PREVENTION
 }
 
-enum ExerciseCategory {
-  STRENGTH
-  POWER
-  CORE
-  GRIP
-  MOBILITY
-  CONDITIONING
-  ACTIVATION
-  WARMUP
-}
-
-enum MovementPattern {
-  SQUAT
-  HINGE
-  HORIZONTAL_PUSH
-  VERTICAL_PUSH
-  HORIZONTAL_PULL
-  VERTICAL_PULL
-  CARRY
-  ROTATION
-  ANTI_ROTATION
-  ANTI_EXTENSION
-  UNILATERAL
-  ISOMETRIC
-  LOCOMOTION
-  OTHER
-}
-
 enum Equipment {
   BODYWEIGHT
   DUMBBELL
@@ -94,6 +66,76 @@ enum TrainingPreference {
   PREFER_DUMBBELLS
   PREFER_CABLES
   PREFER_BODYWEIGHT
+}
+
+enum MovementPattern {
+  SQUAT
+  HINGE
+  LUNGE
+  HORIZONTAL_PUSH
+  VERTICAL_PUSH
+  HORIZONTAL_PULL
+  VERTICAL_PULL
+  CARRY
+  ROTATION
+  ANTI_ROTATION
+  ANTI_EXTENSION
+  ANTI_LATERAL_FLEXION
+  HIP_EXTENSION
+  GRIP
+  NECK
+  CONDITIONING
+  MOBILITY
+}
+
+enum ExerciseCategory {
+  STRENGTH
+  POWER
+  HYPERTROPHY
+  CORE
+  GRIP
+  CONDITIONING
+  MOBILITY
+  PREHAB
+}
+
+enum ExerciseDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum BodyRegion {
+  FULL_BODY
+  CHEST
+  BACK
+  SHOULDERS
+  BICEPS
+  TRICEPS
+  FOREARMS
+  CORE
+  GLUTES
+  QUADRICEPS
+  HAMSTRINGS
+  CALVES
+  HIP
+  NECK
+}
+
+enum ExerciseEquipment {
+  MACHINE
+  CABLE
+  DUMBBELL
+  BARBELL
+  SMITH_MACHINE
+  KETTLEBELL
+  BODYWEIGHT
+  PLATE
+  BENCH
+  PULLUP_BAR
+  TOWEL
+  BIKE
+  TREADMILL
 }
 
 model User {
@@ -191,32 +233,32 @@ model AthleteGoalPriority {
 }
 
 model Exercise {
-  id String @id @default(cuid())
-
-  name String @unique
+  id   String @id @default(cuid())
   slug String @unique
-
-  category ExerciseCategory
-  movement MovementPattern
-
-  equipment Equipment[]
-
-  difficulty TrainingExperience @default(BEGINNER)
+  name String
 
   description String?
 
-  instructions   String[]
-  commonMistakes String[]
-  bjjTransfer    String[]
-  muscles        String[]
-  safetyNotes    String[]
+  category   ExerciseCategory
+  movement   MovementPattern
+  difficulty ExerciseDifficulty @default(BEGINNER)
+
+  primaryRegion BodyRegion
+
+  secondaryRegions BodyRegion[]
+  equipment        ExerciseEquipment[]
+
+  instructions String[]
+  commonErrors String[]
+
+  bjjTransfer String?
 
   videoUrl     String?
   thumbnailUrl String?
 
-  videoDurationSeconds Int?
+  isActive Boolean @default(true)
 
-  active Boolean @default(true)
+  avoidForPainRegions BodyRegion[]
 
   alternativesFrom ExerciseAlternative[] @relation("ExerciseSource")
   alternativesTo   ExerciseAlternative[] @relation("ExerciseTarget")
