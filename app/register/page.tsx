@@ -1,0 +1,60 @@
+import Link from "next/link";
+
+import {
+  Dumbbell,
+  ShieldCheck,
+} from "lucide-react";
+
+import { RegisterForm } from "@/components/auth/register-form";
+
+export default function RegisterPage() {
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen max-w-md flex-col px-5 py-8">
+        <div className="mb-10">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-primary"
+          >
+            <Dumbbell size={20} />
+
+            <span className="text-xs font-bold uppercase tracking-[0.2em]">
+              BJJ Performance
+            </span>
+          </Link>
+        </div>
+
+        <section className="flex-1">
+          <div className="mb-8">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <ShieldCheck size={24} />
+            </div>
+
+            <h1 className="text-3xl font-bold">
+              Comece sua evolução.
+            </h1>
+
+            <p className="mt-3 leading-6 text-muted">
+              Crie sua conta e monte uma
+              preparação física adaptada ao
+              seu Jiu-Jitsu.
+            </p>
+          </div>
+
+          <RegisterForm />
+
+          <p className="mt-6 text-center text-sm text-muted">
+            Já possui uma conta?{" "}
+
+            <Link
+              href="/login"
+              className="font-semibold text-foreground"
+            >
+              Entrar
+            </Link>
+          </p>
+        </section>
+      </div>
+    </main>
+  );
+}

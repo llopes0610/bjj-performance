@@ -77,11 +77,32 @@ enum Equipment {
   OTHER
 }
 
+enum WeekDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum TrainingPreference {
+  AVOID_BARBELL
+  AVOID_HIGH_IMPACT
+  PREFER_MACHINES
+  PREFER_DUMBBELLS
+  PREFER_CABLES
+  PREFER_BODYWEIGHT
+}
+
 model User {
   id       String  @id @default(cuid())
   email    String  @unique
   name     String?
   password String?
+
+  onboardingCompleted Boolean @default(false)
 
   athleteProfile AthleteProfile?
 
@@ -95,9 +116,9 @@ model AthleteProfile {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  age      Int?
-  weightKg Float?
-  heightCm Float?
+  age      Int
+  weightKg Float
+  heightCm Float
 
   belt       Belt @default(WHITE)
   beltDegree Int  @default(0)
@@ -110,9 +131,14 @@ model AthleteProfile {
   bjjDaysPerWeek      Int @default(0)
   strengthDaysPerWeek Int @default(0)
 
+  bjjTrainingDays      WeekDay[]
+  strengthTrainingDays WeekDay[]
+
   sessionDurationMinutes Int @default(60)
 
   goals TrainingGoal[]
+
+  trainingPreferences TrainingPreference[]
 
   currentLevel Int @default(1)
   currentXp    Int @default(0)
@@ -121,7 +147,8 @@ model AthleteProfile {
   currentStreak Int @default(0)
   longestStreak Int @default(0)
 
-  restrictions AthleteRestriction[]
+  restrictions   AthleteRestriction[]
+  goalPriorities AthleteGoalPriority[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -138,8 +165,29 @@ model AthleteRestriction {
 
   active Boolean @default(true)
 
+  recovered Boolean @default(false)
+
+  medicallyCleared Boolean @default(false)
+
+  currentlyPainful Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AthleteGoalPriority {
+  id        String @id @default(cuid())
+  athleteId String
+
+  athlete AthleteProfile @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  goal     TrainingGoal
+  priority Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([athleteId, goal])
+  @@unique([athleteId, priority])
 }
 
 model Exercise {
