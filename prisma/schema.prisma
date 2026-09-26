@@ -1,7 +1,193 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum Belt {
+  WHITE
+  BLUE
+  PURPLE
+  BROWN
+  BLACK
+}
+
+enum TrainingExperience {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum TrainingGoal {
+  STRENGTH
+  GRIP
+  POWER
+  CONDITIONING
+  MOBILITY
+  HYPERTROPHY
+  ENDURANCE
+  INJURY_PREVENTION
+}
+
+enum ExerciseCategory {
+  STRENGTH
+  POWER
+  CORE
+  GRIP
+  MOBILITY
+  CONDITIONING
+  ACTIVATION
+  WARMUP
+}
+
+enum MovementPattern {
+  SQUAT
+  HINGE
+  HORIZONTAL_PUSH
+  VERTICAL_PUSH
+  HORIZONTAL_PULL
+  VERTICAL_PULL
+  CARRY
+  ROTATION
+  ANTI_ROTATION
+  ANTI_EXTENSION
+  UNILATERAL
+  ISOMETRIC
+  LOCOMOTION
+  OTHER
+}
+
+enum Equipment {
+  BODYWEIGHT
+  DUMBBELL
+  MACHINE
+  CABLE
+  KETTLEBELL
+  SMITH_MACHINE
+  LEG_PRESS
+  BENCH
+  PULLUP_BAR
+  TREADMILL
+  BIKE
+  PLATE
+  TOWEL
+  OTHER
+}
+
+model User {
+  id       String  @id @default(cuid())
+  email    String  @unique
+  name     String?
+  password String?
+
+  athleteProfile AthleteProfile?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AthleteProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  age      Int?
+  weightKg Float?
+  heightCm Float?
+
+  belt       Belt @default(WHITE)
+  beltDegree Int  @default(0)
+
+  experience TrainingExperience @default(BEGINNER)
+
+  giTraining   Boolean @default(true)
+  noGiTraining Boolean @default(false)
+
+  bjjDaysPerWeek      Int @default(0)
+  strengthDaysPerWeek Int @default(0)
+
+  sessionDurationMinutes Int @default(60)
+
+  goals TrainingGoal[]
+
+  currentLevel Int @default(1)
+  currentXp    Int @default(0)
+  totalXp      Int @default(0)
+
+  currentStreak Int @default(0)
+  longestStreak Int @default(0)
+
+  restrictions AthleteRestriction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AthleteRestriction {
+  id        String @id @default(cuid())
+  athleteId String
+
+  athlete AthleteProfile @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  bodyArea    String
+  description String
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Exercise {
+  id String @id @default(cuid())
+
+  name String @unique
+  slug String @unique
+
+  category ExerciseCategory
+  movement MovementPattern
+
+  equipment Equipment[]
+
+  difficulty TrainingExperience @default(BEGINNER)
+
+  description String?
+
+  instructions   String[]
+  commonMistakes String[]
+  bjjTransfer    String[]
+  muscles        String[]
+  safetyNotes    String[]
+
+  videoUrl     String?
+  thumbnailUrl String?
+
+  videoDurationSeconds Int?
+
+  active Boolean @default(true)
+
+  alternativesFrom ExerciseAlternative[] @relation("ExerciseSource")
+  alternativesTo   ExerciseAlternative[] @relation("ExerciseTarget")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ExerciseAlternative {
+  id String @id @default(cuid())
+
+  exerciseId    String
+  alternativeId String
+
+  exercise Exercise @relation("ExerciseSource", fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  alternative Exercise @relation("ExerciseTarget", fields: [alternativeId], references: [id], onDelete: Cascade)
+
+  reason String?
+
+  @@unique([exerciseId, alternativeId])
 }
