@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
-import { processWeekCompletion } from "@/lib/gamification/process-week-completion";
+import { processWorkoutCompletion } from "@/lib/gamification/process-workout-completion";
 import { prisma } from "@/lib/prisma";
 
 const VALID_FEELINGS = [
@@ -372,10 +372,11 @@ export async function POST(
      * COMPLETED sem o feedback desta
      * etapa.
      *
-     * A gamificação da semana roda na
-     * mesma transação: não existe sessão
-     * COMPLETED que complete a semana sem
-     * o streak/XP correspondente.
+     * A gamificação (XP do treino, semana,
+     * streak e conquistas) roda na mesma
+     * transação: não existe sessão
+     * COMPLETED sem os efeitos
+     * correspondentes.
      */
     const result =
       await prisma.$transaction(
@@ -427,11 +428,14 @@ export async function POST(
             return null;
           }
 
-          return processWeekCompletion(
+          return processWorkoutCompletion(
             tx,
             {
               athleteId:
                 workoutSession.athleteId,
+
+              workoutId:
+                workoutSession.workoutId,
 
               programId:
                 workoutSession.workout
@@ -465,9 +469,7 @@ export async function POST(
 
       durationMinutes,
 
-      weekCompleted:
-        result.status !==
-        "WEEK_NOT_COMPLETED",
+      gamification: result,
     });
   } catch (error) {
     console.error(

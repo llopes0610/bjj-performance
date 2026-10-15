@@ -3,6 +3,7 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
 
+import { achievementCatalog } from "../data/achievements/catalog";
 import { exerciseCatalog } from "../data/exercises/catalog";
 
 const connectionString = process.env.DATABASE_URL;
@@ -125,6 +126,45 @@ async function main() {
 
   console.log(
     `${exerciseCatalog.length} exercícios processados.`
+  );
+
+  console.log(
+    "Iniciando seed de conquistas..."
+  );
+
+  for (const achievement of achievementCatalog) {
+    await prisma.achievement.upsert({
+      where: {
+        code: achievement.code,
+      },
+
+      update: {
+        name: achievement.name,
+        description:
+          achievement.description,
+        category:
+          achievement.category,
+        xpReward:
+          achievement.xpReward,
+        isActive: true,
+      },
+
+      create: {
+        code: achievement.code,
+        name: achievement.name,
+        description:
+          achievement.description,
+        category:
+          achievement.category,
+        xpReward:
+          achievement.xpReward,
+        isActive: true,
+      },
+    });
+  }
+
+  console.log(
+    `${achievementCatalog.length} conquistas processadas.`
   );
 }
 

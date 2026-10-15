@@ -28,6 +28,12 @@ export type ProcessWeekCompletionResult =
       status: "PROCESSED";
       xpAwarded: number;
       streak: WeeklyStreakResult;
+
+      /**
+       * true quando esta é a semana final
+       * do programa.
+       */
+      programCompleted: boolean;
     };
 
 /**
@@ -42,12 +48,65 @@ export function getProgramWeekSourceId(
 }
 
 /**
+ * Garante que o GamificationProfile existe
+ * e bloqueia sua linha (FOR UPDATE) até o
+ * fim da transação.
+ *
+ * Deve ser chamada antes de qualquer
+ * leitura de fatos de treino usada para
+ * conceder XP, streak ou conquistas.
+ */
+export async function lockGamificationProfile(
+  tx: Prisma.TransactionClient,
+  athleteId: string
+) {
+  /*
+   * GamificationProfile pode ainda não
+   * existir para o atleta.
+   *
+   * skipDuplicates evita erro de constraint
+   * (que abortaria a transação no Postgres)
+   * quando o perfil já existe.
+   */
+  await tx.gamificationProfile.createMany({
+    data: [
+      {
+        athleteId,
+      },
+    ],
+
+    skipDuplicates: true,
+  });
+
+  /*
+   * O lock vem ANTES da verificação dos
+   * fatos de treino.
+   *
+   * Se dois treinos da mesma semana forem
+   * finalizados ao mesmo tempo, a segunda
+   * transação espera a primeira e, ao
+   * continuar, enxerga a sessão já
+   * concluída por ela.
+   */
+  await tx.$queryRaw`
+    SELECT "id"
+    FROM "GamificationProfile"
+    WHERE "athleteId" = ${athleteId}
+    FOR UPDATE
+  `;
+}
+
+/**
  * Processa a conclusão de uma semana de
  * programa.
  *
  * Deve ser executada dentro da mesma
  * transação que marca a WorkoutSession
  * como COMPLETED.
+ *
+ * Pré-requisito: o chamador já executou
+ * lockGamificationProfile() nesta
+ * transação.
  *
  * Idempotência:
  *
@@ -69,41 +128,6 @@ export async function processWeekCompletion(
   }: ProcessWeekCompletionInput
 ): Promise<ProcessWeekCompletionResult> {
   /*
-   * GamificationProfile pode ainda não
-   * existir para o atleta.
-   *
-   * skipDuplicates evita erro de constraint
-   * (que abortaria a transação no Postgres)
-   * quando o perfil já existe.
-   */
-  await tx.gamificationProfile.createMany({
-    data: [
-      {
-        athleteId,
-      },
-    ],
-
-    skipDuplicates: true,
-  });
-
-  /*
-   * O lock vem ANTES da verificação da
-   * semana.
-   *
-   * Se dois treinos da mesma semana forem
-   * finalizados ao mesmo tempo, a segunda
-   * transação espera a primeira e, ao
-   * continuar, enxerga a sessão já
-   * concluída por ela.
-   */
-  await tx.$queryRaw`
-    SELECT "id"
-    FROM "GamificationProfile"
-    WHERE "athleteId" = ${athleteId}
-    FOR UPDATE
-  `;
-
-  /*
    * Semana completa = todos os workouts
    * realmente prescritos no programa
    * possuem uma sessão COMPLETED do atleta
@@ -117,6 +141,8 @@ export async function processWeekCompletion(
       },
 
       select: {
+        durationWeeks: true,
+
         workouts: {
           select: {
             sessions: {
@@ -145,7 +171,7 @@ export async function processWeekCompletion(
         workout.sessions.length > 0
     );
 
-  if (!weekCompleted) {
+  if (!program || !weekCompleted) {
     return {
       status: "WEEK_NOT_COMPLETED",
     };
@@ -269,5 +295,8 @@ export async function processWeekCompletion(
     status: "PROCESSED",
     xpAwarded: WEEK_COMPLETED_XP,
     streak,
+    programCompleted:
+      programWeek >=
+      program.durationWeeks,
   };
 }
