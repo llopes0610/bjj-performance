@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
+import { processWeekCompletion } from "@/lib/gamification/process-week-completion";
 import { prisma } from "@/lib/prisma";
 
 const VALID_FEELINGS = [
@@ -263,6 +264,12 @@ export async function POST(
           },
 
           include: {
+            workout: {
+              select: {
+                programId: true,
+              },
+            },
+
             exercises: {
               include: {
                 sets: true,
@@ -364,50 +371,103 @@ export async function POST(
      * Assim não existe uma sessão
      * COMPLETED sem o feedback desta
      * etapa.
+     *
+     * A gamificação da semana roda na
+     * mesma transação: não existe sessão
+     * COMPLETED que complete a semana sem
+     * o streak/XP correspondente.
      */
-    const completedSession =
-      await prisma.workoutSession.update(
-        {
-          where: {
-            id:
-              workoutSession.id,
-          },
+    const result =
+      await prisma.$transaction(
+        async (tx) => {
+          /*
+           * Update condicional:
+           * um retry/duplo clique
+           * concorrente não finaliza a
+           * mesma sessão duas vezes.
+           */
+          const updated =
+            await tx.workoutSession.updateMany(
+              {
+                where: {
+                  id:
+                    workoutSession.id,
 
-          data: {
-            status:
-              "COMPLETED",
+                  status:
+                    "IN_PROGRESS",
+                },
 
-            completedAt,
+                data: {
+                  status:
+                    "COMPLETED",
 
-            durationMinutes,
+                  completedAt,
 
-            sessionRpe,
+                  durationMinutes,
 
-            postWorkoutFeeling,
+                  sessionRpe,
 
-            hasPain,
+                  postWorkoutFeeling,
 
-            painRegion:
-              normalizedPainRegion,
+                  hasPain,
 
-            painIntensity:
-              normalizedPainIntensity,
+                  painRegion:
+                    normalizedPainRegion,
 
-            painNotes:
-              normalizedPainNotes,
-          },
+                  painIntensity:
+                    normalizedPainIntensity,
+
+                  painNotes:
+                    normalizedPainNotes,
+                },
+              }
+            );
+
+          if (updated.count !== 1) {
+            return null;
+          }
+
+          return processWeekCompletion(
+            tx,
+            {
+              athleteId:
+                workoutSession.athleteId,
+
+              programId:
+                workoutSession.workout
+                  .programId,
+
+              programWeek:
+                workoutSession.programWeek,
+            }
+          );
         }
       );
+
+    if (!result) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Sessão não encontrada ou já finalizada.",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
 
     return NextResponse.json({
       success: true,
 
       sessionId:
-        completedSession.id,
+        workoutSession.id,
 
-      durationMinutes:
-        completedSession
-          .durationMinutes,
+      durationMinutes,
+
+      weekCompleted:
+        result.status !==
+        "WEEK_NOT_COMPLETED",
     });
   } catch (error) {
     console.error(
