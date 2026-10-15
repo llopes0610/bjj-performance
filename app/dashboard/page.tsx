@@ -21,6 +21,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getDashboardData } from "@/lib/dashboard/get-dashboard-data";
+import { GenerateProgramButton } from "@/components/workout/generate-program-button";
 
 export default async function DashboardPage() {
   /*
@@ -146,22 +147,12 @@ export default async function DashboardPage() {
 
             <p className="mt-2 max-w-lg text-sm leading-6 text-muted">
               Seu perfil está
-              configurado, mas não há
-              um programa de
-              preparação física ativo
-              neste momento.
+              configurado. Gere seu
+              programa de preparação
+              física para começar.
             </p>
 
-            <Link
-              href="/workout"
-              className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-white transition hover:opacity-90 sm:w-auto"
-            >
-              Ver treinamento
-
-              <ArrowRight
-                size={18}
-              />
-            </Link>
+            <GenerateProgramButton className="mt-5" />
           </section>
         )}
 

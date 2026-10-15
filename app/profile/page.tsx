@@ -6,17 +6,21 @@ import {
   Dumbbell,
   Flame,
   Medal,
+  Pencil,
   Ruler,
   Scale,
   ShieldCheck,
   Sparkles,
   Target,
   UserRound,
+  UserCog,
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AppNavigation } from "@/components/navigation/app-navigation";
+import { AccountSettings } from "@/components/profile/account-settings";
+import { SignOutButton } from "@/components/profile/sign-out-button";
 import { auth } from "@/lib/auth";
 import { calculateLevel } from "@/lib/gamification/calculate-level";
 import { prisma } from "@/lib/prisma";
@@ -216,6 +220,17 @@ export default async function ProfilePage() {
                 </div>
               </div>
             </div>
+
+            <Link
+              href="/profile/edit"
+              className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-primary-hover active:scale-[0.98] sm:inline-flex sm:w-auto sm:px-5"
+            >
+              <Pencil
+                size={17}
+                aria-hidden="true"
+              />
+              Editar perfil
+            </Link>
           </header>
 
           {/* ================================= */}
@@ -589,6 +604,31 @@ export default async function ProfilePage() {
               </div>
             </div>
           </section>
+
+          {/* ================================= */}
+          {/* CONTA */}
+          {/* ================================= */}
+
+          <ProfileSection
+            icon={
+              <UserCog
+                size={21}
+              />
+            }
+            eyebrow="Configurações"
+            title="Conta"
+          >
+            <AccountSettings
+              name={
+                user.name ?? ""
+              }
+              email={user.email}
+            />
+
+            <div className="mt-5 border-t border-border pt-5">
+              <SignOutButton />
+            </div>
+          </ProfileSection>
         </div>
       </main>
     </AppNavigation>

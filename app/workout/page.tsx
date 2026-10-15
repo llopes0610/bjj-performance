@@ -14,6 +14,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 import { getActiveTrainingProgram } from "@/lib/training-engine/get-active-program";
+import { GenerateProgramButton } from "@/components/workout/generate-program-button";
 import { getNextWorkout } from "@/lib/training-engine/get-next-workout";
 
 import { AdvanceWeekButton } from "@/components/workout/advance-week-button";
@@ -92,9 +93,11 @@ export default async function WorkoutPage() {
               física ainda não foi gerado.
             </p>
 
+            <GenerateProgramButton className="mx-auto mt-6 flex max-w-xs flex-col items-center" />
+
             <Link
               href="/dashboard"
-              className="mx-auto mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-700"
+              className="mx-auto mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-700"
             >
               <ArrowLeft
                 size={17}
