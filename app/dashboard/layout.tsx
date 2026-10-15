@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppNavigation } from "@/components/navigation/app-navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { userHasAccess } from "@/lib/billing/get-access";
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -47,6 +48,18 @@ export default async function DashboardLayout({
     !user.athleteProfile
   ) {
     redirect("/onboarding");
+  }
+
+  /*
+   * Só pago: sem assinatura ativa, o atleta vai para
+   * a página de planos.
+   */
+  if (
+    !(await userHasAccess(
+      session.user.email
+    ))
+  ) {
+    redirect("/plans");
   }
 
   return (

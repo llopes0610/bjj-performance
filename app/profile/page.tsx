@@ -2,6 +2,7 @@ import {
   Activity,
   ArrowRight,
   Award,
+  CreditCard,
   CalendarDays,
   Dumbbell,
   Flame,
@@ -19,9 +20,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AppNavigation } from "@/components/navigation/app-navigation";
+import { BillingRedirectButton } from "@/components/billing/billing-redirect-button";
 import { AccountSettings } from "@/components/profile/account-settings";
 import { SignOutButton } from "@/components/profile/sign-out-button";
 import { auth } from "@/lib/auth";
+import {
+  formatSubscriptionStatus,
+  hasActiveAccess,
+  isBillingEnabled,
+} from "@/lib/billing/access";
 import { calculateLevel } from "@/lib/gamification/calculate-level";
 import { prisma } from "@/lib/prisma";
 
@@ -44,6 +51,14 @@ export default async function ProfilePage() {
         email: true,
         onboardingCompleted:
           true,
+
+        subscription: {
+          select: {
+            status: true,
+            currentPeriodEnd: true,
+            cancelAtPeriodEnd: true,
+          },
+        },
 
         athleteProfile: {
           select: {
@@ -606,6 +621,19 @@ export default async function ProfilePage() {
           </section>
 
           {/* ================================= */}
+          {/* ASSINATURA */}
+          {/* ================================= */}
+
+          {(isBillingEnabled() ||
+            user.subscription) && (
+            <SubscriptionSection
+              subscription={
+                user.subscription
+              }
+            />
+          )}
+
+          {/* ================================= */}
           {/* CONTA */}
           {/* ================================= */}
 
@@ -632,6 +660,103 @@ export default async function ProfilePage() {
         </div>
       </main>
     </AppNavigation>
+  );
+}
+
+/*
+ * ========================================
+ * ASSINATURA
+ * ========================================
+ */
+
+function SubscriptionSection({
+  subscription,
+}: {
+  subscription: {
+    status: string;
+    currentPeriodEnd: Date | null;
+    cancelAtPeriodEnd: boolean;
+  } | null;
+}) {
+  const active =
+    hasActiveAccess(subscription);
+
+  const periodEnd =
+    subscription?.currentPeriodEnd
+      ? new Intl.DateTimeFormat(
+          "pt-BR",
+          {
+            dateStyle: "long",
+            timeZone:
+              "America/Sao_Paulo",
+          }
+        ).format(
+          subscription.currentPeriodEnd
+        )
+      : null;
+
+  let detail =
+    "Assine para usar o programa de treino.";
+
+  if (subscription && active) {
+    if (
+      subscription.cancelAtPeriodEnd ||
+      subscription.status ===
+        "canceled"
+    ) {
+      detail = `Cancelada. Acesso até ${periodEnd ?? "o fim do período"}.`;
+    } else if (
+      subscription.status ===
+      "past_due"
+    ) {
+      detail =
+        "Não conseguimos cobrar seu cartão. Atualize o pagamento para não perder o acesso.";
+    } else {
+      detail = periodEnd
+        ? `Próxima cobrança em ${periodEnd}.`
+        : "Assinatura em dia.";
+    }
+  }
+
+  return (
+    <ProfileSection
+      icon={
+        <CreditCard
+          size={21}
+        />
+      }
+      eyebrow="Plano"
+      title="Assinatura"
+    >
+      <p className="text-sm font-semibold">
+        {subscription
+          ? formatSubscriptionStatus(
+              subscription.status
+            )
+          : "Sem assinatura"}
+      </p>
+
+      <p className="mt-1 text-sm leading-6 text-muted">
+        {detail}
+      </p>
+
+      <div className="mt-4">
+        {subscription ? (
+          <BillingRedirectButton
+            action="portal"
+            label="Gerenciar assinatura"
+            variant="secondary"
+          />
+        ) : (
+          <Link
+            href="/plans"
+            className="flex min-h-12 w-full items-center justify-center rounded-xl bg-primary px-5 py-3 font-semibold text-white transition hover:bg-primary-hover"
+          >
+            Ver plano
+          </Link>
+        )}
+      </div>
+    </ProfileSection>
   );
 }
 

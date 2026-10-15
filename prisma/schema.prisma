@@ -229,6 +229,7 @@ model User {
   onboardingCompleted Boolean @default(false)
 
   athleteProfile AthleteProfile?
+  subscription   Subscription?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -661,4 +662,44 @@ model AthleteAchievement {
 
   @@unique([athleteId, achievementId])
   @@index([athleteId, unlockedAt])
+}
+
+/*
+ * ========================================
+ * ASSINATURA (STRIPE)
+ * ========================================
+ *
+ * O status espelha o da assinatura no Stripe
+ * (active, past_due, canceled, incomplete...).
+ * Só o webhook e a sincronização pós-checkout
+ * alteram estes dados.
+ */
+model Subscription {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripeCustomerId     String  @unique
+  stripeSubscriptionId String? @unique
+  stripePriceId        String?
+
+  status String @default("incomplete")
+
+  currentPeriodEnd  DateTime?
+  cancelAtPeriodEnd Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/*
+ * Eventos do webhook já processados, para que um
+ * reenvio do Stripe não seja aplicado duas vezes.
+ */
+model StripeWebhookEvent {
+  id   String @id
+  type String
+
+  processedAt DateTime @default(now())
 }
