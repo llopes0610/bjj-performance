@@ -186,7 +186,7 @@ export default async function ProfilePage() {
               </div>
 
               <div className="min-w-0">
-                <h1 className="truncate text-2xl font-bold sm:text-3xl">
+                <h1 className="break-words text-2xl font-bold sm:text-3xl">
                   {athleteName}
                 </h1>
 
@@ -660,7 +660,7 @@ function MetricCard({
         {icon}
       </div>
 
-      <p className="mt-3 truncate text-xl font-bold">
+      <p className="mt-3 break-words text-lg font-bold sm:text-xl">
         {value}
 
         {suffix && (

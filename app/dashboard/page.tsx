@@ -1176,7 +1176,8 @@ function RecoveryCard({
             {sessionId && (
               <Link
                 href={`/history/${sessionId}`}
-                className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
+                aria-label="Ver detalhes do último treino"
+                className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
               >
                 <span className="hidden sm:inline">
                   Ver detalhes

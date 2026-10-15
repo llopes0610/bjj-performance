@@ -14,7 +14,7 @@ export default function RegisterPage() {
         <div className="mb-10">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-primary"
+            className="inline-flex min-h-11 items-center gap-2 text-primary"
           >
             <Dumbbell size={20} />
 
@@ -48,7 +48,7 @@ export default function RegisterPage() {
 
             <Link
               href="/login"
-              className="font-semibold text-foreground"
+              className="inline-flex min-h-11 items-center font-semibold text-foreground"
             >
               Entrar
             </Link>

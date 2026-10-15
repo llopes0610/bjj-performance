@@ -238,45 +238,39 @@ export default async function WorkoutPage() {
                   );
 
                 return (
-                  <div
+                  <WorkoutCard
                     key={workout.id}
-                    className="relative"
-                  >
-                    <WorkoutCard
-                      code={workout.code}
-                      name={workout.name}
-                      description={
-                        workout.description
-                      }
-                      duration={
-                        workout.estimatedDurationMinutes
-                      }
-                      exerciseCount={
-                        workout.exercises.length
-                      }
-                      selected={
-                        workout.id ===
-                        currentWorkout?.id
-                      }
-                    />
+                    code={workout.code}
+                    name={workout.name}
+                    description={
+                      workout.description
+                    }
+                    duration={
+                      workout.estimatedDurationMinutes
+                    }
+                    exerciseCount={
+                      workout.exercises.length
+                    }
+                    selected={
+                      workout.id ===
+                      currentWorkout?.id
+                    }
+                    badge={
+                      hasCompletedSession ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-1 text-[11px] font-semibold text-green-400">
+                          <CheckCircle2
+                            size={13}
+                          />
 
-                    {hasCompletedSession && (
-                      <div className="pointer-events-none absolute right-4 top-4 flex items-center gap-1 rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-1 text-[11px] font-semibold text-green-400">
-                        <CheckCircle2
-                          size={13}
-                        />
-
-                        Concluído
-                      </div>
-                    )}
-
-                    {!hasCompletedSession &&
-                      hasActiveSession && (
-                        <div className="pointer-events-none absolute right-4 top-4 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-400">
+                          Concluído
+                        </span>
+                      ) : hasActiveSession ? (
+                        <span className="inline-flex rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-400">
                           Em andamento
-                        </div>
-                      )}
-                  </div>
+                        </span>
+                      ) : null
+                    }
+                  />
                 );
               }
             )}
