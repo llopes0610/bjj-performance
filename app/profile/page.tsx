@@ -1,5 +1,6 @@
 import {
   Activity,
+  ArrowRight,
   Award,
   CalendarDays,
   Dumbbell,
@@ -12,6 +13,7 @@ import {
   Target,
   UserRound,
 } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AppNavigation } from "@/components/navigation/app-navigation";
@@ -538,11 +540,22 @@ export default async function ProfilePage() {
                 </p>
 
                 <p className="mt-0.5 text-xs text-muted">
-                  A gamificação será
-                  expandida na etapa 26.
+                  Semanas completas
+                  seguidas.
                 </p>
               </div>
             </div>
+
+            <Link
+              href="/progress"
+              className="mt-3 flex min-h-11 items-center justify-between gap-3 rounded-xl border border-border px-4 py-3 text-sm font-semibold transition hover:border-primary/40"
+            >
+              Ver progresso e conquistas
+              <ArrowRight
+                size={17}
+                className="shrink-0 text-primary"
+              />
+            </Link>
           </ProfileSection>
 
           {/* ================================= */}

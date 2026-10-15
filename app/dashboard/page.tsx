@@ -665,6 +665,17 @@ export default async function DashboardPage() {
               conquista.
             </p>
           )}
+
+          <Link
+            href="/progress"
+            className="mt-4 flex min-h-11 items-center justify-between gap-3 rounded-xl border border-border px-4 py-3 text-sm font-semibold transition hover:border-primary/40"
+          >
+            Ver progresso e conquistas
+            <ArrowRight
+              size={17}
+              className="shrink-0 text-primary"
+            />
+          </Link>
         </section>
 
         {/* ================================= */}

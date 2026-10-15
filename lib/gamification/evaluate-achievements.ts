@@ -65,3 +65,46 @@ export function evaluateAchievements(
       (achievement) => achievement.code
     );
 }
+
+export interface AchievementProgress {
+  current: number;
+  target: number;
+}
+
+/**
+ * Progresso do atleta em direção a uma
+ * regra de conquista. Usado apenas para
+ * exibição.
+ */
+export function getAchievementProgress(
+  rule: AchievementRule,
+  stats: AchievementStats
+): AchievementProgress {
+  switch (rule.type) {
+    case "COMPLETED_WORKOUTS":
+      return {
+        current: Math.min(
+          stats.completedWorkouts,
+          rule.threshold
+        ),
+        target: rule.threshold,
+      };
+
+    case "WEEKLY_STREAK":
+      return {
+        current: Math.min(
+          stats.currentStreak,
+          rule.threshold
+        ),
+        target: rule.threshold,
+      };
+
+    case "PROGRAM_COMPLETED":
+      return {
+        current: stats.hasCompletedProgram
+          ? 1
+          : 0,
+        target: 1,
+      };
+  }
+}

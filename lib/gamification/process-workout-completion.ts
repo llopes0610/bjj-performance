@@ -60,6 +60,27 @@ export function getPrescribedWorkoutSourceId(
 }
 
 /**
+ * Treinos prescritos únicos concluídos
+ * (workout + semana do programa).
+ */
+export async function countCompletedPrescribedWorkouts(
+  client: Prisma.TransactionClient,
+  athleteId: string
+) {
+  const groups =
+    await client.workoutSession.groupBy({
+      by: ["workoutId", "programWeek"],
+
+      where: {
+        athleteId,
+        status: "COMPLETED",
+      },
+    });
+
+  return groups.length;
+}
+
+/**
  * Efeitos de gamificação derivados de uma
  * WorkoutSession recém concluída:
  *
@@ -171,16 +192,11 @@ export async function processWorkoutCompletion(
    * Sessões repetidas do mesmo treino na
    * mesma semana contam uma vez.
    */
-  const completedWorkouts = (
-    await tx.workoutSession.groupBy({
-      by: ["workoutId", "programWeek"],
-
-      where: {
-        athleteId,
-        status: "COMPLETED",
-      },
-    })
-  ).length;
+  const completedWorkouts =
+    await countCompletedPrescribedWorkouts(
+      tx,
+      athleteId
+    );
 
   const eligibleCodes =
     evaluateAchievements({

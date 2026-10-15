@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { evaluateAchievements } from "./evaluate-achievements";
+import {
+  evaluateAchievements,
+  getAchievementProgress,
+} from "./evaluate-achievements";
 
 describe("evaluateAchievements", () => {
   it("não desbloqueia nada sem treinos", () => {
@@ -65,5 +68,60 @@ describe("evaluateAchievements", () => {
     });
 
     assert.ok(codes.includes("FIRST_PROGRAM"));
+  });
+});
+
+describe("getAchievementProgress", () => {
+  const stats = {
+    completedWorkouts: 7,
+    currentStreak: 2,
+    hasCompletedProgram: false,
+  };
+
+  it("mostra o progresso de treinos até o limiar", () => {
+    assert.deepEqual(
+      getAchievementProgress(
+        {
+          type: "COMPLETED_WORKOUTS",
+          threshold: 10,
+        },
+        stats
+      ),
+      { current: 7, target: 10 }
+    );
+  });
+
+  it("não ultrapassa o limiar", () => {
+    assert.deepEqual(
+      getAchievementProgress(
+        {
+          type: "COMPLETED_WORKOUTS",
+          threshold: 1,
+        },
+        stats
+      ),
+      { current: 1, target: 1 }
+    );
+  });
+
+  it("usa o streak atual e o programa concluído", () => {
+    assert.deepEqual(
+      getAchievementProgress(
+        {
+          type: "WEEKLY_STREAK",
+          threshold: 4,
+        },
+        stats
+      ),
+      { current: 2, target: 4 }
+    );
+
+    assert.deepEqual(
+      getAchievementProgress(
+        { type: "PROGRAM_COMPLETED" },
+        stats
+      ),
+      { current: 0, target: 1 }
+    );
   });
 });
