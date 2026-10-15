@@ -161,6 +161,65 @@ enum WorkoutExerciseBlock {
   MOBILITY
 }
 
+enum WorkoutSessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ProgressionDecision {
+  PROGRESS
+  MAINTAIN
+  REGRESS
+  NO_DATA
+}
+
+enum ExerciseExecutionType {
+  REPS
+  TIME
+  DISTANCE
+}
+
+enum PostWorkoutFeeling {
+  VERY_GOOD
+  GOOD
+  NORMAL
+  TIRED
+  VERY_TIRED
+}
+
+enum SessionRecoveryStatus {
+  READY
+  CAUTION
+  FATIGUED
+  PAIN_ALERT
+}
+
+enum GamificationEventType {
+  WORKOUT_COMPLETED
+  WEEK_COMPLETED
+  FIRST_WORKOUT
+  STREAK_MILESTONE
+  ACHIEVEMENT_UNLOCKED
+  PROGRAM_COMPLETED
+  MANUAL_ADJUSTMENT
+}
+
+enum GamificationSourceType {
+  WORKOUT_SESSION
+  PROGRAM_WEEK
+  ACHIEVEMENT
+  TRAINING_PROGRAM
+  SYSTEM
+}
+
+enum AchievementCategory {
+  TRAINING
+  CONSISTENCY
+  MILESTONE
+  PROGRAM
+}
+
 model User {
   id       String  @id @default(cuid())
   email    String  @unique
@@ -198,6 +257,7 @@ model AthleteProfile {
 
   bjjTrainingDays      WeekDay[]
   strengthTrainingDays WeekDay[]
+  workoutSessions      WorkoutSession[]
 
   sessionDurationMinutes Int @default(60)
 
@@ -206,12 +266,9 @@ model AthleteProfile {
   trainingPreferences TrainingPreference[]
   trainingPrograms    TrainingProgram[]
 
-  currentLevel Int @default(1)
-  currentXp    Int @default(0)
-  totalXp      Int @default(0)
-
-  currentStreak Int @default(0)
-  longestStreak Int @default(0)
+  gamificationProfile GamificationProfile?
+  gamificationEvents  GamificationEvent[]
+  achievements        AthleteAchievement[]
 
   restrictions   AthleteRestriction[]
   goalPriorities AthleteGoalPriority[]
@@ -356,6 +413,7 @@ model Workout {
   estimatedDurationMinutes Int
 
   exercises WorkoutExercise[]
+  sessions  WorkoutSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -384,15 +442,223 @@ model WorkoutExercise {
   durationSeconds Int?
   distanceMeters  Int?
 
+  sessionExercises WorkoutSessionExercise[]
+
+  weeklyPrescriptions WorkoutExercisePrescription[]
+
   restSeconds Int
 
   targetRpe Float?
 
   notes String?
 
+  executionType ExerciseExecutionType @default(REPS)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([workoutId, order])
   @@index([exerciseId])
+}
+
+model WorkoutSession {
+  id        String @id @default(cuid())
+  athleteId String
+  workoutId String
+
+  athlete AthleteProfile @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  workout Workout        @relation(fields: [workoutId], references: [id], onDelete: Restrict)
+
+  programWeek Int @default(1)
+
+  status WorkoutSessionStatus @default(IN_PROGRESS)
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  durationMinutes Int?
+  sessionRpe      Float?
+  notes           String?
+
+  postWorkoutFeeling PostWorkoutFeeling?
+
+  hasPain Boolean?
+
+  painRegion String?
+
+  painIntensity Int?
+
+  painNotes String?
+
+  exercises WorkoutSessionExercise[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([athleteId, status])
+  @@index([workoutId])
+  @@index([athleteId, programWeek])
+}
+
+model WorkoutSessionExercise {
+  id                String @id @default(cuid())
+  workoutSessionId  String
+  workoutExerciseId String
+
+  workoutSession  WorkoutSession  @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Restrict)
+
+  order Int
+
+  completed Boolean @default(false)
+
+  sets WorkoutSet[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workoutSessionId, workoutExerciseId])
+  @@index([workoutExerciseId])
+}
+
+model WorkoutSet {
+  id                       String @id @default(cuid())
+  workoutSessionExerciseId String
+
+  workoutSessionExercise WorkoutSessionExercise @relation(fields: [workoutSessionExerciseId], references: [id], onDelete: Cascade)
+
+  setNumber Int
+
+  weightKg        Float?
+  reps            Int?
+  rpe             Float?
+  durationSeconds Int?
+  distanceMeters  Float?
+
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workoutSessionExerciseId, setNumber])
+}
+
+model WorkoutExercisePrescription {
+  id String @id @default(cuid())
+
+  workoutExerciseId String
+
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+
+  programWeek Int
+
+  sets Int
+
+  repsMin Int?
+  repsMax Int?
+
+  durationSeconds Int?
+  distanceMeters  Int?
+
+  safetyStatus SessionRecoveryStatus?
+
+  progressionReason String?
+
+  restSeconds Int
+
+  targetRpe Float?
+
+  suggestedWeightKg Float?
+
+  progressionDecision     ProgressionDecision @default(NO_DATA)
+  previousAverageWeightKg Float?
+  previousAverageReps     Float?
+  previousAverageRpe      Float?
+
+  previousAverageDurationSeconds Float?
+  previousAverageDistanceMeters  Float?
+
+  notes String?
+
+  executionType ExerciseExecutionType @default(REPS)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workoutExerciseId, programWeek])
+  @@index([programWeek])
+  @@index([workoutExerciseId])
+}
+
+model GamificationProfile {
+  id        String @id @default(cuid())
+  athleteId String @unique
+
+  athlete AthleteProfile @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  totalXp Int @default(0)
+
+  currentStreak Int @default(0)
+  longestStreak Int @default(0)
+
+  lastCompletedWeek      Int?
+  lastCompletedProgramId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GamificationEvent {
+  id        String @id @default(cuid())
+  athleteId String
+
+  athlete AthleteProfile @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  type       GamificationEventType
+  sourceType GamificationSourceType
+  sourceId   String
+
+  xp Int
+
+  description String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([athleteId, type, sourceType, sourceId])
+  @@index([athleteId, createdAt])
+  @@index([sourceType, sourceId])
+}
+
+model Achievement {
+  id   String @id @default(cuid())
+  code String @unique
+
+  name        String
+  description String
+
+  category AchievementCategory
+
+  xpReward Int @default(0)
+
+  isActive Boolean @default(true)
+
+  athleteAchievements AthleteAchievement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AthleteAchievement {
+  id            String @id @default(cuid())
+  athleteId     String
+  achievementId String
+
+  athlete     AthleteProfile @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  achievement Achievement    @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  unlockedAt DateTime @default(now())
+
+  @@unique([athleteId, achievementId])
+  @@index([athleteId, unlockedAt])
 }

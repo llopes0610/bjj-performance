@@ -23,8 +23,10 @@ export function LoginForm() {
   const [password, setPassword] =
     useState("");
 
-  const [showPassword, setShowPassword] =
-    useState(false);
+  const [
+    showPassword,
+    setShowPassword,
+  ] = useState(false);
 
   const [error, setError] =
     useState("");
@@ -72,7 +74,7 @@ export function LoginForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4"
+      className="w-full space-y-4"
     >
       <div>
         <label
@@ -87,12 +89,18 @@ export function LoginForm() {
           type="email"
           required
           autoComplete="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          inputMode="email"
+          enterKeyHint="next"
           value={email}
           onChange={(event) =>
-            setEmail(event.target.value)
+            setEmail(
+              event.target.value
+            )
           }
           placeholder="voce@email.com"
-          className="w-full rounded-xl border border-border bg-surface px-4 py-3.5 outline-none transition focus:border-primary"
+          className="min-h-12 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-primary"
         />
       </div>
 
@@ -114,6 +122,7 @@ export function LoginForm() {
             }
             required
             autoComplete="current-password"
+            enterKeyHint="go"
             value={password}
             onChange={(event) =>
               setPassword(
@@ -121,29 +130,47 @@ export function LoginForm() {
               )
             }
             placeholder="Sua senha"
-            className="w-full rounded-xl border border-border bg-surface px-4 py-3.5 pr-12 outline-none transition focus:border-primary"
+            className="min-h-12 w-full rounded-xl border border-border bg-surface px-4 py-3 pr-14 text-base outline-none transition placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-primary"
           />
 
           <button
             type="button"
             onClick={() =>
               setShowPassword(
-                (current) => !current
+                (current) =>
+                  !current
               )
             }
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted"
+            aria-label={
+              showPassword
+                ? "Ocultar senha"
+                : "Mostrar senha"
+            }
+            aria-pressed={
+              showPassword
+            }
+            className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted transition hover:bg-white/5 hover:text-white active:scale-95"
           >
             {showPassword ? (
-              <EyeOff size={19} />
+              <EyeOff
+                size={20}
+                aria-hidden="true"
+              />
             ) : (
-              <Eye size={19} />
+              <Eye
+                size={20}
+                aria-hidden="true"
+              />
             )}
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-900/50 bg-red-950/40 p-3 text-sm text-red-300">
+        <div
+          role="alert"
+          className="rounded-xl border border-red-900/50 bg-red-950/40 p-3.5 text-sm leading-5 text-red-300"
+        >
           {error}
         </div>
       )}
@@ -151,12 +178,13 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={loading}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 font-bold transition hover:bg-primary-hover disabled:opacity-60"
+        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 font-bold text-white transition active:scale-[0.99] hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading && (
           <LoaderCircle
             size={18}
             className="animate-spin"
+            aria-hidden="true"
           />
         )}
 

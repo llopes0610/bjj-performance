@@ -9,8 +9,8 @@ import { RegisterForm } from "@/components/auth/register-form";
 
 export default function RegisterPage() {
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto flex min-h-screen max-w-md flex-col px-5 py-8">
+    <main className="min-h-dvh bg-background text-foreground">
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-8 pt-6 sm:px-6 sm:py-10">
         <div className="mb-10">
           <Link
             href="/"
@@ -30,7 +30,7 @@ export default function RegisterPage() {
               <ShieldCheck size={24} />
             </div>
 
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
               Comece sua evolução.
             </h1>
 

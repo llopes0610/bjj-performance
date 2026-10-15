@@ -160,6 +160,13 @@ export function OnboardingForm() {
       return "";
     }, [step, data]);
 
+  function scrollToTop() {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
   function nextStep() {
     if (validationError) {
       setError(validationError);
@@ -167,6 +174,7 @@ export function OnboardingForm() {
     }
 
     setError("");
+
     setStep((current) =>
       Math.min(
         current + 1,
@@ -174,10 +182,7 @@ export function OnboardingForm() {
       )
     );
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    scrollToTop();
   }
 
   function previousStep() {
@@ -187,10 +192,7 @@ export function OnboardingForm() {
       Math.max(current - 1, 1)
     );
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    scrollToTop();
   }
 
   async function finish() {
@@ -241,13 +243,13 @@ export function OnboardingForm() {
   }
 
   return (
-    <div>
+    <div className="w-full">
       <OnboardingProgress
         currentStep={step}
         totalSteps={TOTAL_STEPS}
       />
 
-      <div className="mt-10">
+      <div className="mt-7 sm:mt-10">
         {step === 1 && (
           <StepBody
             data={data}
@@ -292,58 +294,87 @@ export function OnboardingForm() {
       </div>
 
       {error && (
-        <div className="mt-6 rounded-xl border border-red-900/50 bg-red-950/40 p-4 text-sm text-red-300">
+        <div
+          role="alert"
+          className="mt-5 rounded-xl border border-red-900/50 bg-red-950/40 p-3.5 text-sm leading-5 text-red-300 sm:mt-6 sm:p-4"
+        >
           {error}
         </div>
       )}
 
-      <div className="mt-10 flex gap-3 border-t border-border pt-6">
-        {step > 1 && (
-          <button
-            type="button"
-            onClick={previousStep}
-            disabled={loading}
-            className="flex items-center justify-center gap-2 rounded-xl border border-border px-5 py-3.5 font-semibold"
-          >
-            <ArrowLeft size={18} />
-            Voltar
-          </button>
-        )}
+      <div className="mt-8 border-t border-border pt-5 sm:mt-10 sm:pt-6">
+        <div
+          className={[
+            "grid gap-3",
+            step > 1
+              ? "grid-cols-[auto_1fr]"
+              : "grid-cols-1",
+          ].join(" ")}
+        >
+          {step > 1 && (
+            <button
+              type="button"
+              onClick={previousStep}
+              disabled={loading}
+              className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:px-5 sm:py-3.5"
+            >
+              <ArrowLeft
+                size={18}
+                aria-hidden="true"
+              />
 
-        {step < TOTAL_STEPS ? (
-          <button
-            type="button"
-            onClick={nextStep}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3.5 font-bold transition hover:bg-primary-hover"
-          >
-            Continuar
-            <ArrowRight size={18} />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={finish}
-            disabled={loading}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3.5 font-bold transition hover:bg-primary-hover disabled:opacity-60"
-          >
-            {loading ? (
-              <>
-                <LoaderCircle
-                  size={18}
-                  className="animate-spin"
-                />
-                Salvando...
-              </>
-            ) : (
-              <>
-                Criar meu perfil
-                <ArrowRight
-                  size={18}
-                />
-              </>
-            )}
-          </button>
-        )}
+              <span className="hidden min-[380px]:inline">
+                Voltar
+              </span>
+            </button>
+          )}
+
+          {step < TOTAL_STEPS ? (
+            <button
+              type="button"
+              onClick={nextStep}
+              disabled={loading}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-bold text-white transition active:scale-[0.98] hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 sm:px-5 sm:py-3.5"
+            >
+              Continuar
+
+              <ArrowRight
+                size={18}
+                aria-hidden="true"
+              />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={finish}
+              disabled={loading}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-bold text-white transition active:scale-[0.98] hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 sm:px-5 sm:py-3.5"
+            >
+              {loading ? (
+                <>
+                  <LoaderCircle
+                    size={18}
+                    className="animate-spin"
+                    aria-hidden="true"
+                  />
+
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <span className="whitespace-nowrap">
+                    Criar meu perfil
+                  </span>
+
+                  <ArrowRight
+                    size={18}
+                    aria-hidden="true"
+                  />
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
