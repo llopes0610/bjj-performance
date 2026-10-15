@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
-import { processWorkoutCompletion } from "@/lib/gamification/process-workout-completion";
 import { prisma } from "@/lib/prisma";
+import { completeWorkoutSession } from "@/lib/workout/complete-workout-session";
 
 const VALID_FEELINGS = [
   "VERY_GOOD",
@@ -379,77 +379,45 @@ export async function POST(
      * correspondentes.
      */
     const result =
-      await prisma.$transaction(
-        async (tx) => {
-          /*
-           * Update condicional:
-           * um retry/duplo clique
-           * concorrente não finaliza a
-           * mesma sessão duas vezes.
-           */
-          const updated =
-            await tx.workoutSession.updateMany(
-              {
-                where: {
-                  id:
-                    workoutSession.id,
+      await completeWorkoutSession({
+        session: {
+          id: workoutSession.id,
 
-                  status:
-                    "IN_PROGRESS",
-                },
+          athleteId:
+            workoutSession.athleteId,
 
-                data: {
-                  status:
-                    "COMPLETED",
+          workoutId:
+            workoutSession.workoutId,
 
-                  completedAt,
+          programId:
+            workoutSession.workout
+              .programId,
 
-                  durationMinutes,
+          programWeek:
+            workoutSession.programWeek,
+        },
 
-                  sessionRpe,
+        completedAt,
 
-                  postWorkoutFeeling,
+        data: {
+          durationMinutes,
 
-                  hasPain,
+          sessionRpe,
 
-                  painRegion:
-                    normalizedPainRegion,
+          postWorkoutFeeling,
 
-                  painIntensity:
-                    normalizedPainIntensity,
+          hasPain,
 
-                  painNotes:
-                    normalizedPainNotes,
-                },
-              }
-            );
+          painRegion:
+            normalizedPainRegion,
 
-          if (updated.count !== 1) {
-            return null;
-          }
+          painIntensity:
+            normalizedPainIntensity,
 
-          return processWorkoutCompletion(
-            tx,
-            {
-              athleteId:
-                workoutSession.athleteId,
-
-              workoutId:
-                workoutSession.workoutId,
-
-              programId:
-                workoutSession.workout
-                  .programId,
-
-              programWeek:
-                workoutSession.programWeek,
-
-              occurredAt:
-                completedAt,
-            }
-          );
-        }
-      );
+          painNotes:
+            normalizedPainNotes,
+        },
+      });
 
     if (!result) {
       return NextResponse.json(

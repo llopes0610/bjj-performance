@@ -223,6 +223,28 @@ export async function processWorkoutCompletion(
         },
       });
 
+    /*
+     * Conquista elegível ausente no banco
+     * (seed não executado ou desativada):
+     * não falha a finalização do treino,
+     * mas deixa rastro no log.
+     */
+    if (
+      achievements.length <
+      eligibleCodes.length
+    ) {
+      console.warn(
+        "GAMIFICATION_ACHIEVEMENTS_MISSING",
+        eligibleCodes.filter(
+          (code) =>
+            !achievements.some(
+              (achievement) =>
+                achievement.code === code
+            )
+        )
+      );
+    }
+
     for (const achievement of achievements) {
       const unlocked =
         await tx.athleteAchievement.createMany({
