@@ -443,6 +443,9 @@ export async function POST(
 
               programWeek:
                 workoutSession.programWeek,
+
+              occurredAt:
+                completedAt,
             }
           );
         }

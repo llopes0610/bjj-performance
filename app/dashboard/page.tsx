@@ -12,6 +12,8 @@ import {
   ShieldCheck,
   TrendingDown,
   TrendingUp,
+  Trophy,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -85,6 +87,7 @@ export default async function DashboardPage() {
     nextWorkout,
     performance,
     recovery,
+    gamification,
     stats,
   } = dashboard;
 
@@ -541,6 +544,128 @@ export default async function DashboardPage() {
             />
           </>
         )}
+
+        {/* ================================= */}
+        {/* GAMIFICAÇÃO */}
+        {/* ================================= */}
+
+        <section className="mt-4 rounded-2xl border border-border bg-card p-4 sm:p-6">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted">
+                Evolução
+              </p>
+
+              <h2 className="mt-2 text-xl font-bold">
+                Nível{" "}
+                {gamification.level}
+              </h2>
+            </div>
+
+            <span className="text-sm font-semibold text-primary">
+              {gamification.totalXp} XP
+            </span>
+          </div>
+
+          <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-surface">
+            <div
+              className="h-full rounded-full bg-primary transition-all"
+              style={{
+                width: `${gamification.progressPercentage}%`,
+              }}
+            />
+          </div>
+
+          <div className="mt-2 flex justify-between gap-3 text-xs text-muted">
+            <span>
+              {
+                gamification.currentLevelXp
+              }
+              /
+              {
+                gamification.xpRequiredForLevel
+              }{" "}
+              XP
+            </span>
+
+            <span>
+              {
+                gamification.xpToNextLevel
+              }{" "}
+              XP para o nível{" "}
+              {gamification.level + 1}
+            </span>
+          </div>
+
+          <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
+            <SmallInfo
+              icon={
+                <Flame size={16} />
+              }
+              value={`${gamification.currentStreak}`}
+              label="Semanas seguidas"
+            />
+
+            <SmallInfo
+              icon={
+                <Zap size={16} />
+              }
+              value={`${gamification.longestStreak}`}
+              label="Recorde"
+            />
+
+            <SmallInfo
+              icon={
+                <Trophy size={16} />
+              }
+              value={`${gamification.achievementsUnlocked}/${gamification.achievementsTotal}`}
+              label="Conquistas"
+            />
+          </div>
+
+          {gamification.recentAchievements
+            .length > 0 ? (
+            <div className="mt-5 space-y-2">
+              {gamification.recentAchievements.map(
+                (achievement) => (
+                  <div
+                    key={
+                      achievement.code
+                    }
+                    className="flex items-center justify-between gap-3 rounded-xl bg-surface px-3 py-2.5"
+                  >
+                    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+                      <Trophy
+                        size={15}
+                        className="shrink-0 text-primary"
+                      />
+
+                      <span className="truncate">
+                        {
+                          achievement.name
+                        }
+                      </span>
+                    </span>
+
+                    <span className="shrink-0 text-xs text-muted">
+                      +
+                      {
+                        achievement.xpReward
+                      }{" "}
+                      XP
+                    </span>
+                  </div>
+                )
+              )}
+            </div>
+          ) : (
+            <p className="mt-5 text-sm leading-6 text-muted">
+              Conclua seu primeiro treino
+              para desbloquear a primeira
+              conquista.
+            </p>
+          )}
+        </section>
 
         {/* ================================= */}
         {/* PERFIL */}

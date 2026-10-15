@@ -166,6 +166,79 @@ export async function getDashboardData(
   const longestStreak =
     gamification?.longestStreak ?? 0;
 
+  /*
+   * Conquistas: total ativo no catálogo e
+   * as mais recentes do atleta.
+   */
+  const [
+    achievementsTotal,
+    achievementsUnlocked,
+    recentAchievements,
+  ] = await Promise.all([
+    prisma.achievement.count({
+      where: {
+        isActive: true,
+      },
+    }),
+
+    prisma.athleteAchievement.count({
+      where: {
+        athleteId,
+      },
+    }),
+
+    prisma.athleteAchievement.findMany({
+      where: {
+        athleteId,
+      },
+
+      orderBy: {
+        unlockedAt: "desc",
+      },
+
+      take: 3,
+
+      select: {
+        unlockedAt: true,
+
+        achievement: {
+          select: {
+            code: true,
+            name: true,
+            xpReward: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  const gamificationSummary = {
+    level: levelProgress.level,
+    totalXp,
+    currentLevelXp:
+      levelProgress.currentLevelXp,
+    xpRequiredForLevel:
+      levelProgress.xpRequiredForLevel,
+    xpToNextLevel:
+      levelProgress.xpToNextLevel,
+    progressPercentage:
+      levelProgress.progressPercentage,
+    currentStreak,
+    longestStreak,
+    achievementsUnlocked,
+    achievementsTotal,
+    recentAchievements:
+      recentAchievements.map(
+        (item) => ({
+          code: item.achievement.code,
+          name: item.achievement.name,
+          xpReward:
+            item.achievement.xpReward,
+          unlockedAt: item.unlockedAt,
+        })
+      ),
+  };
+
 /*
 
    * ========================================
@@ -639,6 +712,9 @@ export async function getDashboardData(
       },
 
       recovery,
+
+      gamification:
+        gamificationSummary,
 
       stats: {
 
@@ -1223,6 +1299,9 @@ export async function getDashboardData(
     },
 
     recovery,
+
+    gamification:
+      gamificationSummary,
 
     stats: {
 

@@ -15,6 +15,13 @@ interface ProcessWeekCompletionInput {
   athleteId: string;
   programId: string;
   programWeek: number;
+
+  /**
+   * Momento da conclusão da sessão.
+   * Gravado como createdAt do evento para
+   * vincular o XP à sessão que o gerou.
+   */
+  occurredAt: Date;
 }
 
 export type ProcessWeekCompletionResult =
@@ -125,6 +132,7 @@ export async function processWeekCompletion(
     athleteId,
     programId,
     programWeek,
+    occurredAt,
   }: ProcessWeekCompletionInput
 ): Promise<ProcessWeekCompletionResult> {
   /*
@@ -195,6 +203,7 @@ export async function processWeekCompletion(
             ),
           xp: WEEK_COMPLETED_XP,
           description: `Semana ${programWeek} concluída`,
+          createdAt: occurredAt,
         },
       ],
 

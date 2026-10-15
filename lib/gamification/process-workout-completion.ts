@@ -17,6 +17,17 @@ interface ProcessWorkoutCompletionInput {
   workoutId: string;
   programId: string;
   programWeek: number;
+
+  /**
+   * Momento da conclusão da sessão
+   * (WorkoutSession.completedAt).
+   *
+   * Todos os eventos e conquistas gerados
+   * aqui recebem esse timestamp, o que
+   * permite à tela pós-treino mostrar
+   * exatamente o que esta sessão gerou.
+   */
+  occurredAt: Date;
 }
 
 export interface UnlockedAchievement {
@@ -69,6 +80,7 @@ export async function processWorkoutCompletion(
     workoutId,
     programId,
     programWeek,
+    occurredAt,
   }: ProcessWorkoutCompletionInput
 ): Promise<ProcessWorkoutCompletionResult> {
   await lockGamificationProfile(
@@ -97,6 +109,7 @@ export async function processWorkoutCompletion(
             ),
           xp: WORKOUT_COMPLETED_XP,
           description: `Treino concluído (semana ${programWeek})`,
+          createdAt: occurredAt,
         },
       ],
 
@@ -130,6 +143,7 @@ export async function processWorkoutCompletion(
       athleteId,
       programId,
       programWeek,
+      occurredAt,
     });
 
   if (week.status === "PROCESSED") {
@@ -201,6 +215,7 @@ export async function processWorkoutCompletion(
               athleteId,
               achievementId:
                 achievement.id,
+              unlockedAt: occurredAt,
             },
           ],
 
@@ -221,6 +236,7 @@ export async function processWorkoutCompletion(
               sourceId: achievement.id,
               xp: achievement.xpReward,
               description: `Conquista: ${achievement.name}`,
+              createdAt: occurredAt,
             },
           ],
 
