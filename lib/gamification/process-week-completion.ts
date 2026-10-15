@@ -22,6 +22,12 @@ interface ProcessWeekCompletionInput {
    * vincular o XP à sessão que o gerou.
    */
   occurredAt: Date;
+
+  /**
+   * Estado retornado por
+   * lockGamificationProfile().
+   */
+  profile: LockedGamificationProfile;
 }
 
 export type ProcessWeekCompletionResult =
@@ -55,25 +61,80 @@ export function getProgramWeekSourceId(
 }
 
 /**
- * Garante que o GamificationProfile existe
- * e bloqueia sua linha (FOR UPDATE) até o
- * fim da transação.
+ * Estado do GamificationProfile lido sob
+ * lock.
+ */
+export interface LockedGamificationProfile {
+  currentStreak: number;
+  longestStreak: number;
+  lastCompletedWeek: number | null;
+  lastCompletedProgramId: string | null;
+}
+
+async function selectProfileForUpdate(
+  tx: Prisma.TransactionClient,
+  athleteId: string
+) {
+  const rows =
+    await tx.$queryRaw<
+      LockedGamificationProfile[]
+    >`
+      SELECT
+        "currentStreak",
+        "longestStreak",
+        "lastCompletedWeek",
+        "lastCompletedProgramId"
+      FROM "GamificationProfile"
+      WHERE "athleteId" = ${athleteId}
+      FOR UPDATE
+    `;
+
+  return rows[0] ?? null;
+}
+
+/**
+ * Garante que o GamificationProfile existe,
+ * bloqueia sua linha (FOR UPDATE) até o
+ * fim da transação e retorna o estado do
+ * streak.
  *
  * Deve ser chamada antes de qualquer
  * leitura de fatos de treino usada para
  * conceder XP, streak ou conquistas.
+ *
+ * O lock vem ANTES da verificação dos
+ * fatos de treino: se dois treinos da
+ * mesma semana forem finalizados ao mesmo
+ * tempo, a segunda transação espera a
+ * primeira e, ao continuar, enxerga a
+ * sessão já concluída por ela.
  */
 export async function lockGamificationProfile(
   tx: Prisma.TransactionClient,
   athleteId: string
-) {
+): Promise<LockedGamificationProfile> {
   /*
-   * GamificationProfile pode ainda não
-   * existir para o atleta.
+   * Caso comum: o perfil já existe e uma
+   * única consulta cria o lock e lê o
+   * estado.
+   */
+  const existing =
+    await selectProfileForUpdate(
+      tx,
+      athleteId
+    );
+
+  if (existing) {
+    return existing;
+  }
+
+  /*
+   * Primeiro treino do atleta.
    *
    * skipDuplicates evita erro de constraint
    * (que abortaria a transação no Postgres)
-   * quando o perfil já existe.
+   * se outra transação criar o perfil ao
+   * mesmo tempo.
    */
   await tx.gamificationProfile.createMany({
     data: [
@@ -85,22 +146,19 @@ export async function lockGamificationProfile(
     skipDuplicates: true,
   });
 
-  /*
-   * O lock vem ANTES da verificação dos
-   * fatos de treino.
-   *
-   * Se dois treinos da mesma semana forem
-   * finalizados ao mesmo tempo, a segunda
-   * transação espera a primeira e, ao
-   * continuar, enxerga a sessão já
-   * concluída por ela.
-   */
-  await tx.$queryRaw`
-    SELECT "id"
-    FROM "GamificationProfile"
-    WHERE "athleteId" = ${athleteId}
-    FOR UPDATE
-  `;
+  const created =
+    await selectProfileForUpdate(
+      tx,
+      athleteId
+    );
+
+  if (!created) {
+    throw new Error(
+      "GamificationProfile não encontrado após criação."
+    );
+  }
+
+  return created;
 }
 
 /**
@@ -114,6 +172,10 @@ export async function lockGamificationProfile(
  * Pré-requisito: o chamador já executou
  * lockGamificationProfile() nesta
  * transação.
+ *
+ * Não grava no GamificationProfile: o
+ * chamador aplica XP e streak em um único
+ * update, reduzindo o tempo da transação.
  *
  * Idempotência:
  *
@@ -133,6 +195,7 @@ export async function processWeekCompletion(
     programId,
     programWeek,
     occurredAt,
+    profile,
   }: ProcessWeekCompletionInput
 ): Promise<ProcessWeekCompletionResult> {
   /*
@@ -216,13 +279,6 @@ export async function processWeekCompletion(
     };
   }
 
-  const profile =
-    await tx.gamificationProfile.findUniqueOrThrow({
-      where: {
-        athleteId,
-      },
-    });
-
   /*
    * Continuidade entre programas:
    *
@@ -274,31 +330,6 @@ export async function processWeekCompletion(
         profile.lastCompletedWeek,
       previousProgramCompleted,
     });
-
-  await tx.gamificationProfile.update({
-    where: {
-      athleteId,
-    },
-
-    data: {
-      totalXp: {
-        increment: WEEK_COMPLETED_XP,
-      },
-
-      ...(streak.changed
-        ? {
-            currentStreak:
-              streak.currentStreak,
-            longestStreak:
-              streak.longestStreak,
-            lastCompletedProgramId:
-              streak.lastCompletedProgramId,
-            lastCompletedWeek:
-              streak.lastCompletedWeek,
-          }
-        : {}),
-    },
-  });
 
   return {
     status: "PROCESSED",

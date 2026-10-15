@@ -104,10 +104,18 @@ export async function processWorkoutCompletion(
     occurredAt,
   }: ProcessWorkoutCompletionInput
 ): Promise<ProcessWorkoutCompletionResult> {
-  await lockGamificationProfile(
-    tx,
-    athleteId
-  );
+  /*
+   * Cada consulta aqui é uma ida ao banco
+   * dentro da transação (que segura o lock
+   * do perfil). Por isso as gravações no
+   * GamificationProfile são acumuladas e
+   * aplicadas em um único update no fim.
+   */
+  const profile =
+    await lockGamificationProfile(
+      tx,
+      athleteId
+    );
 
   let xpAwarded = 0;
 
@@ -139,19 +147,6 @@ export async function processWorkoutCompletion(
 
   if (workoutEvent.count === 1) {
     xpAwarded += WORKOUT_COMPLETED_XP;
-
-    await tx.gamificationProfile.update({
-      where: {
-        athleteId,
-      },
-
-      data: {
-        totalXp: {
-          increment:
-            WORKOUT_COMPLETED_XP,
-        },
-      },
-    });
   }
 
   /*
@@ -165,10 +160,16 @@ export async function processWorkoutCompletion(
       programId,
       programWeek,
       occurredAt,
+      profile,
     });
+
+  let currentStreak =
+    profile.currentStreak;
 
   if (week.status === "PROCESSED") {
     xpAwarded += week.xpAwarded;
+    currentStreak =
+      week.streak.currentStreak;
   }
 
   /*
@@ -176,16 +177,6 @@ export async function processWorkoutCompletion(
    * CONQUISTAS
    * ========================================
    */
-  const profile =
-    await tx.gamificationProfile.findUniqueOrThrow({
-      where: {
-        athleteId,
-      },
-
-      select: {
-        currentStreak: true,
-      },
-    });
 
   /*
    * Treinos prescritos únicos concluídos.
@@ -201,8 +192,7 @@ export async function processWorkoutCompletion(
   const eligibleCodes =
     evaluateAchievements({
       completedWorkouts,
-      currentStreak:
-        profile.currentStreak,
+      currentStreak,
       hasCompletedProgram:
         week.status === "PROCESSED" &&
         week.programCompleted,
@@ -212,7 +202,11 @@ export async function processWorkoutCompletion(
     [];
 
   if (eligibleCodes.length > 0) {
-    const achievements =
+    /*
+     * Somente conquistas elegíveis que o
+     * atleta ainda não possui.
+     */
+    const pending =
       await tx.achievement.findMany({
         where: {
           code: {
@@ -220,95 +214,128 @@ export async function processWorkoutCompletion(
           },
 
           isActive: true,
+
+          athleteAchievements: {
+            none: {
+              athleteId,
+            },
+          },
         },
       });
 
-    /*
-     * Conquista elegível ausente no banco
-     * (seed não executado ou desativada):
-     * não falha a finalização do treino,
-     * mas deixa rastro no log.
-     */
-    if (
-      achievements.length <
-      eligibleCodes.length
-    ) {
-      console.warn(
-        "GAMIFICATION_ACHIEVEMENTS_MISSING",
-        eligibleCodes.filter(
-          (code) =>
-            !achievements.some(
-              (achievement) =>
-                achievement.code === code
-            )
-        )
-      );
-    }
-
-    for (const achievement of achievements) {
-      const unlocked =
-        await tx.athleteAchievement.createMany({
-          data: [
-            {
+    if (pending.length > 0) {
+      /*
+       * skipDuplicates + RETURNING:
+       * só retornam as linhas realmente
+       * inseridas nesta transação.
+       */
+      const inserted =
+        await tx.athleteAchievement.createManyAndReturn({
+          data: pending.map(
+            (achievement) => ({
               athleteId,
               achievementId:
                 achievement.id,
               unlockedAt: occurredAt,
-            },
-          ],
+            })
+          ),
 
           skipDuplicates: true,
-        });
 
-      if (unlocked.count === 0) {
-        continue;
-      }
-
-      const event =
-        await tx.gamificationEvent.createMany({
-          data: [
-            {
-              athleteId,
-              type: "ACHIEVEMENT_UNLOCKED",
-              sourceType: "ACHIEVEMENT",
-              sourceId: achievement.id,
-              xp: achievement.xpReward,
-              description: `Conquista: ${achievement.name}`,
-              createdAt: occurredAt,
-            },
-          ],
-
-          skipDuplicates: true,
-        });
-
-      if (
-        event.count === 1 &&
-        achievement.xpReward > 0
-      ) {
-        xpAwarded +=
-          achievement.xpReward;
-
-        await tx.gamificationProfile.update({
-          where: {
-            athleteId,
-          },
-
-          data: {
-            totalXp: {
-              increment:
-                achievement.xpReward,
-            },
+          select: {
+            achievementId: true,
           },
         });
+
+      const insertedIds = new Set(
+        inserted.map(
+          (item) => item.achievementId
+        )
+      );
+
+      const newlyUnlocked =
+        pending.filter((achievement) =>
+          insertedIds.has(achievement.id)
+        );
+
+      if (newlyUnlocked.length > 0) {
+        const events =
+          await tx.gamificationEvent.createManyAndReturn({
+            data: newlyUnlocked.map(
+              (achievement) => ({
+                athleteId,
+                type: "ACHIEVEMENT_UNLOCKED" as const,
+                sourceType: "ACHIEVEMENT" as const,
+                sourceId: achievement.id,
+                xp: achievement.xpReward,
+                description: `Conquista: ${achievement.name}`,
+                createdAt: occurredAt,
+              })
+            ),
+
+            skipDuplicates: true,
+
+            select: {
+              xp: true,
+            },
+          });
+
+        xpAwarded += events.reduce(
+          (total, event) =>
+            total + event.xp,
+          0
+        );
       }
 
-      unlockedAchievements.push({
-        code: achievement.code,
-        name: achievement.name,
-        xpReward:
-          achievement.xpReward,
-      });
+      unlockedAchievements.push(
+        ...newlyUnlocked.map(
+          (achievement) => ({
+            code: achievement.code,
+            name: achievement.name,
+            xpReward:
+              achievement.xpReward,
+          })
+        )
+      );
     }
+  }
+
+  /*
+   * ========================================
+   * PERFIL (ÚNICO UPDATE)
+   * ========================================
+   */
+  const streakChanged =
+    week.status === "PROCESSED" &&
+    week.streak.changed;
+
+  if (xpAwarded > 0 || streakChanged) {
+    await tx.gamificationProfile.update({
+      where: {
+        athleteId,
+      },
+
+      data: {
+        totalXp: {
+          increment: xpAwarded,
+        },
+
+        ...(streakChanged
+          ? {
+              currentStreak:
+                week.streak.currentStreak,
+              longestStreak:
+                week.streak.longestStreak,
+              lastCompletedProgramId:
+                week.streak
+                  .lastCompletedProgramId,
+              lastCompletedWeek:
+                week.streak
+                  .lastCompletedWeek,
+            }
+          : {}),
+      },
+    });
   }
 
   return {
@@ -316,8 +343,7 @@ export async function processWorkoutCompletion(
     weekCompleted:
       week.status !==
       "WEEK_NOT_COMPLETED",
-    currentStreak:
-      profile.currentStreak,
+    currentStreak,
     unlockedAchievements,
   };
 }

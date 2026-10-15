@@ -5,6 +5,20 @@ import {
   type ProcessWorkoutCompletionResult,
 } from "@/lib/gamification/process-workout-completion";
 
+/*
+ * Limites da transação interativa.
+ *
+ * O padrão do Prisma (5s) conta também o
+ * tempo esperando o lock do perfil de
+ * gamificação. Com banco remoto (latência
+ * por consulta) e duas finalizações
+ * simultâneas do mesmo atleta, a segunda
+ * transação pode passar de 5s só esperando
+ * a primeira.
+ */
+const TRANSACTION_MAX_WAIT_MS = 10_000;
+const TRANSACTION_TIMEOUT_MS = 20_000;
+
 interface CompleteWorkoutSessionInput {
   session: {
     id: string;
@@ -81,6 +95,10 @@ export async function completeWorkoutSession({
           occurredAt: completedAt,
         }
       );
+    },
+    {
+      maxWait: TRANSACTION_MAX_WAIT_MS,
+      timeout: TRANSACTION_TIMEOUT_MS,
     }
   );
 }
