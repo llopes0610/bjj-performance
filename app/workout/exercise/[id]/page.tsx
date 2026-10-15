@@ -102,6 +102,9 @@ export default async function ExercisePage({
           videoUrl={
             exercise.videoUrl
           }
+          thumbnailUrl={
+            exercise.thumbnailUrl
+          }
           exerciseName={
             exercise.name
           }

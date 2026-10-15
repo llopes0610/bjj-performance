@@ -69,6 +69,12 @@ async function main() {
         bjjTransfer:
           exercise.bjjTransfer,
 
+        videoUrl:
+          exercise.videoUrl,
+
+        thumbnailUrl:
+          exercise.thumbnailUrl,
+
         avoidForPainRegions: [
           ...exercise.avoidForPainRegions,
         ],
@@ -114,6 +120,12 @@ async function main() {
 
         bjjTransfer:
           exercise.bjjTransfer,
+
+        videoUrl:
+          exercise.videoUrl,
+
+        thumbnailUrl:
+          exercise.thumbnailUrl,
 
         avoidForPainRegions: [
           ...exercise.avoidForPainRegions,
