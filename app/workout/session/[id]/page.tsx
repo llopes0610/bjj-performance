@@ -14,6 +14,7 @@ import {
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+import { ExerciseDemoSheet } from "@/components/workout/exercise-demo-sheet";
 import { FinishWorkoutButton } from "@/components/workout/finish-workout-button";
 
 import {
@@ -308,6 +309,29 @@ export default async function WorkoutSessionPage({
                           sessionExercise.completed
                             ? "shrink-0 text-green-500"
                             : "shrink-0 text-zinc-700"
+                        }
+                      />
+                    </div>
+
+                    <div className="mt-4">
+                      <ExerciseDemoSheet
+                        exerciseName={
+                          exercise.name
+                        }
+                        videoUrl={
+                          exercise.videoUrl
+                        }
+                        thumbnailUrl={
+                          exercise.thumbnailUrl
+                        }
+                        instructions={
+                          exercise.instructions
+                        }
+                        commonErrors={
+                          exercise.commonErrors
+                        }
+                        bjjTransfer={
+                          exercise.bjjTransfer
                         }
                       />
                     </div>

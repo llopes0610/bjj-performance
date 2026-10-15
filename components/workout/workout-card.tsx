@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import {
   ChevronRight,
   Clock3,
@@ -11,6 +13,13 @@ interface WorkoutCardProps {
   duration: number;
   exerciseCount: number;
   selected?: boolean;
+
+  /**
+   * Selo de status (ex.: Concluído).
+   * Renderizado no fluxo do layout para não
+   * sobrepor o título em telas estreitas.
+   */
+  badge?: ReactNode;
 }
 
 export function WorkoutCard({
@@ -20,6 +29,7 @@ export function WorkoutCard({
   duration,
   exerciseCount,
   selected = false,
+  badge,
 }: WorkoutCardProps) {
   return (
     <div
@@ -31,7 +41,7 @@ export function WorkoutCard({
       ].join(" ")}
     >
       <div className="flex items-start justify-between gap-4">
-        <div className="flex gap-4">
+        <div className="flex min-w-0 gap-4">
           <div
             className={[
               "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-bold",
@@ -43,7 +53,13 @@ export function WorkoutCard({
             {code}
           </div>
 
-          <div>
+          <div className="min-w-0">
+            {badge && (
+              <div className="mb-2">
+                {badge}
+              </div>
+            )}
+
             <h3 className="font-semibold text-white">
               {name}
             </h3>
@@ -75,4 +91,4 @@ export function WorkoutCard({
       </div>
     </div>
   );
-}
+}

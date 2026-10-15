@@ -39,6 +39,12 @@ export const exerciseCatalog = [
     bjjTransfer:
       "Desenvolve força de pernas útil para base, pressão, passagem, ponte e levantamentos.",
 
+    videoUrl:
+      "https://www.youtube.com/watch?v=GutQSsdFxPE",
+
+    thumbnailUrl:
+      "https://i.ytimg.com/vi/GutQSsdFxPE/hqdefault.jpg",
+
     avoidForPainRegions: [],
   },
 
@@ -83,6 +89,12 @@ export const exerciseCatalog = [
     bjjTransfer:
       "Fortalece cadeia posterior e extensão de quadril para pontes, quedas, pressão e controle corporal.",
 
+    videoUrl:
+      "https://www.youtube.com/watch?v=hQgFixeXdZo",
+
+    thumbnailUrl:
+      "https://i.ytimg.com/vi/hQgFixeXdZo/hqdefault.jpg",
+
     avoidForPainRegions: [],
   },
 
@@ -124,6 +136,12 @@ export const exerciseCatalog = [
 
     bjjTransfer:
       "Melhora força de puxada utilizada em grips, controles, quebras de postura e aproximação do adversário.",
+
+    videoUrl:
+      "https://www.youtube.com/watch?v=EU7bOadUsNI",
+
+    thumbnailUrl:
+      "https://i.ytimg.com/vi/EU7bOadUsNI/hqdefault.jpg",
 
     avoidForPainRegions: [],
   },
@@ -167,6 +185,12 @@ export const exerciseCatalog = [
     bjjTransfer:
       "Desenvolve puxada vertical e capacidade de manter o adversário próximo durante controles e grips.",
 
+    videoUrl:
+      "https://www.youtube.com/watch?v=AKl1em_pH_c",
+
+    thumbnailUrl:
+      "https://i.ytimg.com/vi/AKl1em_pH_c/hqdefault.jpg",
+
     avoidForPainRegions: [],
   },
 
@@ -207,6 +231,12 @@ export const exerciseCatalog = [
 
     bjjTransfer:
       "Contribui para frames, afastamentos, controle de distância e ações de empurrar.",
+
+    videoUrl:
+      "https://www.youtube.com/watch?v=B-zyH8OTlsg",
+
+    thumbnailUrl:
+      "https://i.ytimg.com/vi/B-zyH8OTlsg/hqdefault.jpg",
 
     avoidForPainRegions: [],
   },
@@ -249,6 +279,12 @@ export const exerciseCatalog = [
 
     bjjTransfer:
       "Desenvolve base, força de pernas, controle de tronco e capacidade de levantar do solo.",
+
+    videoUrl:
+      "https://www.youtube.com/watch?v=zsN2WvklwDk",
+
+    thumbnailUrl:
+      "https://i.ytimg.com/vi/zsN2WvklwDk/hqdefault.jpg",
 
     avoidForPainRegions: [],
   },
@@ -294,6 +330,12 @@ export const exerciseCatalog = [
     bjjTransfer:
       "Desenvolve força unilateral, estabilidade e correção de assimetrias importantes para base, quedas e passagens.",
 
+    videoUrl:
+      "https://www.youtube.com/watch?v=ATt4-rr3_ZU",
+
+    thumbnailUrl:
+      "https://i.ytimg.com/vi/ATt4-rr3_ZU/hqdefault.jpg",
+
     avoidForPainRegions: [],
   },
 
@@ -336,6 +378,12 @@ export const exerciseCatalog = [
     bjjTransfer:
       "Fortalece extensão de quadril importante para pontes, escapes, pressão e geração de força.",
 
+    videoUrl:
+      "https://www.youtube.com/watch?v=6ombApkDsf4",
+
+    thumbnailUrl:
+      "https://i.ytimg.com/vi/6ombApkDsf4/hqdefault.jpg",
+
     avoidForPainRegions: [],
   },
 
@@ -374,6 +422,12 @@ export const exerciseCatalog = [
 
     bjjTransfer:
       "Melhora estabilidade do tronco contra forças rotacionais presentes em controles, passagens e defesa.",
+
+    videoUrl:
+      "https://www.youtube.com/watch?v=u4XcUc_3F5s",
+
+    thumbnailUrl:
+      "https://i.ytimg.com/vi/u4XcUc_3F5s/hqdefault.jpg",
 
     avoidForPainRegions: [],
   },
@@ -415,6 +469,12 @@ export const exerciseCatalog = [
 
     bjjTransfer:
       "Auxilia estabilidade dos ombros e musculatura escapular, importantes para puxadas, frames e tolerância ao grappling.",
+
+    videoUrl:
+      "https://www.youtube.com/watch?v=wnPX6Fwe-Fg",
+
+    thumbnailUrl:
+      "https://i.ytimg.com/vi/wnPX6Fwe-Fg/hqdefault.jpg",
 
     avoidForPainRegions: [],
   },
@@ -459,6 +519,12 @@ export const exerciseCatalog = [
     bjjTransfer:
       "Desenvolve support grip, antebraços, trapézio e estabilidade de tronco úteis para manutenção de grips.",
 
+    videoUrl:
+      "https://www.youtube.com/watch?v=vi4X2iSOyiA",
+
+    thumbnailUrl:
+      "https://i.ytimg.com/vi/vi4X2iSOyiA/hqdefault.jpg",
+
     avoidForPainRegions: [],
   },
 
@@ -499,6 +565,12 @@ export const exerciseCatalog = [
 
     bjjTransfer:
       "Desenvolve resistência isométrica da pegada e antebraços.",
+
+    videoUrl:
+      "https://www.youtube.com/watch?v=g0I7Jv3oqKw",
+
+    thumbnailUrl:
+      "https://i.ytimg.com/vi/g0I7Jv3oqKw/hqdefault.jpg",
 
     avoidForPainRegions: [],
   },
@@ -542,6 +614,12 @@ export const exerciseCatalog = [
 
     bjjTransfer:
       "Treina dedos, antebraços e sustentação isométrica de forma semelhante à demanda de grips no kimono.",
+
+    videoUrl:
+      "https://www.youtube.com/watch?v=JvTL5qXJUv8",
+
+    thumbnailUrl:
+      "https://i.ytimg.com/vi/JvTL5qXJUv8/hqdefault.jpg",
 
     avoidForPainRegions: [],
   },

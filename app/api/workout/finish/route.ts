@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { completeWorkoutSession } from "@/lib/workout/complete-workout-session";
 
 const VALID_FEELINGS = [
   "VERY_GOOD",
@@ -263,6 +264,12 @@ export async function POST(
           },
 
           include: {
+            workout: {
+              select: {
+                programId: true,
+              },
+            },
+
             exercises: {
               include: {
                 sets: true,
@@ -364,50 +371,76 @@ export async function POST(
      * Assim não existe uma sessão
      * COMPLETED sem o feedback desta
      * etapa.
+     *
+     * A gamificação (XP do treino, semana,
+     * streak e conquistas) roda na mesma
+     * transação: não existe sessão
+     * COMPLETED sem os efeitos
+     * correspondentes.
      */
-    const completedSession =
-      await prisma.workoutSession.update(
+    const result =
+      await completeWorkoutSession({
+        session: {
+          id: workoutSession.id,
+
+          athleteId:
+            workoutSession.athleteId,
+
+          workoutId:
+            workoutSession.workoutId,
+
+          programId:
+            workoutSession.workout
+              .programId,
+
+          programWeek:
+            workoutSession.programWeek,
+        },
+
+        completedAt,
+
+        data: {
+          durationMinutes,
+
+          sessionRpe,
+
+          postWorkoutFeeling,
+
+          hasPain,
+
+          painRegion:
+            normalizedPainRegion,
+
+          painIntensity:
+            normalizedPainIntensity,
+
+          painNotes:
+            normalizedPainNotes,
+        },
+      });
+
+    if (!result) {
+      return NextResponse.json(
         {
-          where: {
-            id:
-              workoutSession.id,
-          },
-
-          data: {
-            status:
-              "COMPLETED",
-
-            completedAt,
-
-            durationMinutes,
-
-            sessionRpe,
-
-            postWorkoutFeeling,
-
-            hasPain,
-
-            painRegion:
-              normalizedPainRegion,
-
-            painIntensity:
-              normalizedPainIntensity,
-
-            painNotes:
-              normalizedPainNotes,
-          },
+          success: false,
+          error:
+            "Sessão não encontrada ou já finalizada.",
+        },
+        {
+          status: 404,
         }
       );
+    }
 
     return NextResponse.json({
       success: true,
 
       sessionId:
-        completedSession.id,
+        workoutSession.id,
 
-      durationMinutes:
-        completedSession
-          .durationMinutes,
+      durationMinutes,
+
+      gamification: result,
     });
   } catch (error) {
     console.error(
@@ -426,4 +459,4 @@ export async function POST(
       }
     );
   }
-}
+}

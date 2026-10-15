@@ -13,7 +13,7 @@ export default function LoginPage() {
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-8 pt-6 sm:px-6 sm:py-10">
         <Link
           href="/"
-          className="mb-12 inline-flex items-center gap-2 text-primary"
+          className="mb-12 inline-flex min-h-11 items-center gap-2 text-primary"
         >
           <Dumbbell size={20} />
 
@@ -45,7 +45,7 @@ export default function LoginPage() {
 
             <Link
               href="/register"
-              className="font-semibold text-foreground"
+              className="inline-flex min-h-11 items-center font-semibold text-foreground"
             >
               Criar conta
             </Link>
