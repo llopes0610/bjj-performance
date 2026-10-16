@@ -1,14 +1,14 @@
 import { prisma } from "@/lib/prisma";
 
 import {
-  hasActiveAccess,
   isBillingEnabled,
+  PAID_PURCHASE_STATUS,
 } from "./access";
 
 /*
- * Diz se o usuário (pelo e-mail da sessão) pode usar as
- * partes pagas do app. Com a cobrança desligada, sempre
- * libera.
+ * Diz se o usuário (pelo e-mail da sessão autenticada)
+ * comprou o BJJ Performance. Com a cobrança desligada,
+ * sempre libera.
  */
 export async function userHasAccess(
   email: string
@@ -17,27 +17,28 @@ export async function userHasAccess(
     return true;
   }
 
-  const subscription =
-    await prisma.subscription.findFirst({
+  const purchase =
+    await prisma.purchase.findFirst({
       where: {
+        status: PAID_PURCHASE_STATUS,
+
         user: {
           email,
         },
       },
 
       select: {
-        status: true,
-        currentPeriodEnd: true,
+        id: true,
       },
     });
 
-  return hasActiveAccess(subscription);
+  return purchase !== null;
 }
 
 export function paymentRequiredResponseBody() {
   return {
     error:
-      "Sua assinatura não está ativa. Assine para continuar.",
+      "Você ainda não tem acesso ao BJJ Performance. Compre o acesso para continuar.",
     code: "PAYMENT_REQUIRED",
   };
 }

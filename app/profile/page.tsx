@@ -20,15 +20,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AppNavigation } from "@/components/navigation/app-navigation";
-import { BillingRedirectButton } from "@/components/billing/billing-redirect-button";
 import { AccountSettings } from "@/components/profile/account-settings";
 import { SignOutButton } from "@/components/profile/sign-out-button";
 import { auth } from "@/lib/auth";
 import {
-  formatSubscriptionStatus,
-  hasActiveAccess,
+  hasPaidAccess,
   isBillingEnabled,
+  PAID_PURCHASE_STATUS,
 } from "@/lib/billing/access";
+import { formatMoney } from "@/lib/billing/plan";
 import { calculateLevel } from "@/lib/gamification/calculate-level";
 import { prisma } from "@/lib/prisma";
 
@@ -52,11 +52,21 @@ export default async function ProfilePage() {
         onboardingCompleted:
           true,
 
-        subscription: {
+        purchases: {
+          where: {
+            status:
+              PAID_PURCHASE_STATUS,
+          },
+
+          orderBy: {
+            paidAt: "asc",
+          },
+
           select: {
             status: true,
-            currentPeriodEnd: true,
-            cancelAtPeriodEnd: true,
+            paidAt: true,
+            amountTotal: true,
+            currency: true,
           },
         },
 
@@ -621,14 +631,15 @@ export default async function ProfilePage() {
           </section>
 
           {/* ================================= */}
-          {/* ASSINATURA */}
+          {/* MEU ACESSO */}
           {/* ================================= */}
 
           {(isBillingEnabled() ||
-            user.subscription) && (
-            <SubscriptionSection
-              subscription={
-                user.subscription
+            user.purchases.length >
+              0) && (
+            <AccessSection
+              purchases={
+                user.purchases
               }
             />
           )}
@@ -665,58 +676,25 @@ export default async function ProfilePage() {
 
 /*
  * ========================================
- * ASSINATURA
+ * MEU ACESSO (PAGAMENTO ÚNICO)
  * ========================================
  */
 
-function SubscriptionSection({
-  subscription,
+function AccessSection({
+  purchases,
 }: {
-  subscription: {
+  purchases: {
     status: string;
-    currentPeriodEnd: Date | null;
-    cancelAtPeriodEnd: boolean;
-  } | null;
+    paidAt: Date;
+    amountTotal: number;
+    currency: string;
+  }[];
 }) {
   const active =
-    hasActiveAccess(subscription);
+    hasPaidAccess(purchases);
 
-  const periodEnd =
-    subscription?.currentPeriodEnd
-      ? new Intl.DateTimeFormat(
-          "pt-BR",
-          {
-            dateStyle: "long",
-            timeZone:
-              "America/Sao_Paulo",
-          }
-        ).format(
-          subscription.currentPeriodEnd
-        )
-      : null;
-
-  let detail =
-    "Assine para usar o programa de treino.";
-
-  if (subscription && active) {
-    if (
-      subscription.cancelAtPeriodEnd ||
-      subscription.status ===
-        "canceled"
-    ) {
-      detail = `Cancelada. Acesso até ${periodEnd ?? "o fim do período"}.`;
-    } else if (
-      subscription.status ===
-      "past_due"
-    ) {
-      detail =
-        "Não conseguimos cobrar seu cartão. Atualize o pagamento para não perder o acesso.";
-    } else {
-      detail = periodEnd
-        ? `Próxima cobrança em ${periodEnd}.`
-        : "Assinatura em dia.";
-    }
-  }
+  // A primeira compra paga é a que liberou o acesso.
+  const purchase = purchases[0];
 
   return (
     <ProfileSection
@@ -725,37 +703,58 @@ function SubscriptionSection({
           size={21}
         />
       }
-      eyebrow="Plano"
-      title="Assinatura"
+      eyebrow="BJJ Performance"
+      title="Meu acesso"
     >
-      <p className="text-sm font-semibold">
-        {subscription
-          ? formatSubscriptionStatus(
-              subscription.status
-            )
-          : "Sem assinatura"}
-      </p>
-
-      <p className="mt-1 text-sm leading-6 text-muted">
-        {detail}
-      </p>
-
-      <div className="mt-4">
-        {subscription ? (
-          <BillingRedirectButton
-            action="portal"
-            label="Gerenciar assinatura"
-            variant="secondary"
+      {active && purchase ? (
+        <div className="grid grid-cols-2 gap-3">
+          <InformationCard
+            label="Status"
+            value="Acesso ativo"
           />
-        ) : (
+
+          <InformationCard
+            label="Pagamento"
+            value="Pagamento único"
+          />
+
+          <InformationCard
+            label="Data da compra"
+            value={new Intl.DateTimeFormat(
+              "pt-BR",
+              {
+                dateStyle: "medium",
+                timeZone:
+                  "America/Sao_Paulo",
+              }
+            ).format(
+              purchase.paidAt
+            )}
+          />
+
+          <InformationCard
+            label="Valor pago"
+            value={formatMoney(
+              purchase.amountTotal,
+              purchase.currency
+            )}
+          />
+        </div>
+      ) : (
+        <>
+          <p className="text-sm leading-6 text-muted">
+            Você ainda não comprou o
+            acesso ao BJJ Performance.
+          </p>
+
           <Link
             href="/plans"
-            className="flex min-h-12 w-full items-center justify-center rounded-xl bg-primary px-5 py-3 font-semibold text-white transition hover:bg-primary-hover"
+            className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl bg-primary px-5 py-3 font-semibold text-white transition hover:bg-primary-hover"
           >
-            Ver plano
+            Comprar acesso
           </Link>
-        )}
-      </div>
+        </>
+      )}
     </ProfileSection>
   );
 }

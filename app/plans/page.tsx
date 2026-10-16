@@ -1,17 +1,18 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import {
-  ArrowRight,
   Check,
   Dumbbell,
 } from "lucide-react";
 
-import { BillingRedirectButton } from "@/components/billing/billing-redirect-button";
+import { CheckoutButton } from "@/components/billing/checkout-button";
 import { SignOutButton } from "@/components/profile/sign-out-button";
 import { auth } from "@/lib/auth";
 import { userHasAccess } from "@/lib/billing/get-access";
-import { MONTHLY_PLAN } from "@/lib/billing/plan";
+import {
+  getOfferPriceLabel,
+  PRODUCT_OFFER,
+} from "@/lib/billing/plan";
 
 export default async function PlansPage() {
   const session = await auth();
@@ -20,10 +21,19 @@ export default async function PlansPage() {
     redirect("/login");
   }
 
-  const hasAccess =
+  /*
+   * Quem já comprou não volta para a oferta.
+   */
+  if (
     await userHasAccess(
       session.user.email
-    );
+    )
+  ) {
+    redirect("/dashboard");
+  }
+
+  const priceLabel =
+    await getOfferPriceLabel();
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
@@ -42,34 +52,34 @@ export default async function PlansPage() {
         </header>
 
         <h1 className="mt-8 text-2xl font-bold sm:text-3xl">
-          {hasAccess
-            ? "Sua assinatura está ativa"
-            : "Assine para treinar"}
+          Libere seu acesso
         </h1>
 
         <p className="mt-2 text-sm leading-6 text-muted">
-          {hasAccess
-            ? "Você já tem acesso completo ao BJJ Performance."
-            : "Preparação física feita para o Jiu-Jitsu, com programa individual e progressão semanal."}
+          Preparação física feita para o
+          Jiu-Jitsu, com programa
+          individual e progressão semanal.
         </p>
 
         <section className="mt-6 rounded-2xl border border-border bg-card p-5 sm:p-6">
           <p className="text-sm font-semibold text-primary">
-            {MONTHLY_PLAN.name}
+            {PRODUCT_OFFER.name}
           </p>
 
-          <p className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl font-bold">
-              {MONTHLY_PLAN.priceLabel}
-            </span>
+          <p className="mt-2 flex flex-wrap items-baseline gap-x-2">
+            {priceLabel && (
+              <span className="text-3xl font-bold">
+                {priceLabel}
+              </span>
+            )}
 
             <span className="text-sm text-muted">
-              {MONTHLY_PLAN.periodLabel}
+              {PRODUCT_OFFER.paymentLabel}
             </span>
           </p>
 
           <ul className="mt-5 space-y-3">
-            {MONTHLY_PLAN.features.map(
+            {PRODUCT_OFFER.features.map(
               (feature) => (
                 <li
                   key={feature}
@@ -88,32 +98,14 @@ export default async function PlansPage() {
           </ul>
 
           <div className="mt-6">
-            {hasAccess ? (
-              <Link
-                href="/dashboard"
-                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-white transition hover:bg-primary-hover"
-              >
-                Ir para o app
-                <ArrowRight
-                  size={18}
-                  aria-hidden="true"
-                />
-              </Link>
-            ) : (
-              <BillingRedirectButton
-                action="checkout"
-                label="Assinar agora"
-              />
-            )}
+            <CheckoutButton />
           </div>
 
-          {!hasAccess && (
-            <p className="mt-3 text-center text-xs leading-5 text-muted">
-              Pagamento seguro pelo Stripe,
-              no cartão de crédito. Cancele
-              quando quiser pelo seu perfil.
-            </p>
-          )}
+          <p className="mt-3 text-center text-xs leading-5 text-muted">
+            Pagamento seguro pelo Stripe.
+            Você paga uma vez e o acesso
+            fica liberado.
+          </p>
         </section>
 
         <div className="mt-8">

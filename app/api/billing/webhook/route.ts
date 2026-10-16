@@ -1,92 +1,61 @@
 import { NextResponse } from "next/server";
 
+import { fulfillCheckoutSession } from "@/lib/billing/fulfill-checkout";
 import { verifyStripeSignature } from "@/lib/billing/stripe-signature";
-import { syncStripeSubscription } from "@/lib/billing/subscription-sync";
 import { prisma } from "@/lib/prisma";
 
 /*
- * Webhook do Stripe. Única fonte, junto da sincronização
- * pós-checkout, que altera o status das assinaturas.
+ * Webhook do Stripe para a compra única do BJJ Performance.
  *
  * - O corpo é lido cru para validar Stripe-Signature.
- * - Cada evento é processado uma vez (StripeWebhookEvent).
- * - O status é relido do Stripe, então a ordem dos eventos
- *   não importa.
+ * - Cada evento é processado uma vez (StripeWebhookEvent) e
+ *   a compra é única por sessão de checkout (Purchase).
+ * - A sessão é relida no Stripe antes de liberar acesso:
+ *   mode=payment, payment_status=paid, preço esperado e
+ *   usuário existente.
+ * - Erro de rede ou banco responde 500 para o Stripe tentar
+ *   de novo; sessão inválida responde 200 (repetir não muda
+ *   o resultado) e fica no log.
  */
 
-const SUBSCRIPTION_EVENTS = new Set([
-  "customer.subscription.created",
-  "customer.subscription.updated",
-  "customer.subscription.deleted",
-  "customer.subscription.paused",
-  "customer.subscription.resumed",
+// Pagamento confirmado: libera acesso.
+const FULFILLMENT_EVENTS = new Set([
+  "checkout.session.completed",
+  // Só ocorre com métodos assíncronos (Pix, boleto).
+  "checkout.session.async_payment_succeeded",
 ]);
 
-const INVOICE_EVENTS = new Set([
-  "invoice.paid",
-  "invoice.payment_failed",
-]);
+// Pagamento assíncrono recusado: apenas registramos.
+const FAILED_PAYMENT_EVENT =
+  "checkout.session.async_payment_failed";
 
 interface StripeEvent {
   id: string;
   type: string;
+  livemode?: boolean;
   data: {
     object: {
       id?: string;
       object?: string;
-      subscription?:
-        | string
-        | null
-        | {
-            id: string;
-          };
-      parent?: {
-        subscription_details?: {
-          subscription?: string | null;
-        } | null;
-      } | null;
     };
   };
 }
 
-function getSubscriptionId(
+async function markProcessed(
   event: StripeEvent
-): string | null {
-  const object = event.data.object;
+) {
+  await prisma.stripeWebhookEvent.upsert({
+    where: {
+      id: event.id,
+    },
 
-  if (
-    SUBSCRIPTION_EVENTS.has(
-      event.type
-    )
-  ) {
-    return object.id ?? null;
-  }
+    create: {
+      id: event.id,
+      type: event.type,
+    },
 
-  if (
-    event.type ===
-      "checkout.session.completed" ||
-    INVOICE_EVENTS.has(event.type)
-  ) {
-    const subscription =
-      object.subscription;
-
-    if (typeof subscription === "string") {
-      return subscription;
-    }
-
-    if (subscription?.id) {
-      return subscription.id;
-    }
-
-    // Faturas nas versões novas da API.
-    return (
-      object.parent
-        ?.subscription_details
-        ?.subscription ?? null
-    );
-  }
-
-  return null;
+    update: {},
+  });
 }
 
 export async function POST(
@@ -148,6 +117,17 @@ export async function POST(
     );
   }
 
+  if (
+    !FULFILLMENT_EVENTS.has(event.type) &&
+    event.type !== FAILED_PAYMENT_EVENT
+  ) {
+    // Evento que não usamos: confirmamos o recebimento.
+    return NextResponse.json({
+      received: true,
+      ignored: true,
+    });
+  }
+
   const alreadyProcessed =
     await prisma.stripeWebhookEvent.findUnique({
       where: {
@@ -166,42 +146,77 @@ export async function POST(
     });
   }
 
-  try {
-    const subscriptionId =
-      getSubscriptionId(event);
+  const checkoutSessionId =
+    event.data.object.object ===
+    "checkout.session"
+      ? event.data.object.id
+      : undefined;
 
-    if (subscriptionId) {
-      await syncStripeSubscription(
-        subscriptionId
-      );
-    }
+  if (!checkoutSessionId) {
+    console.warn(
+      "STRIPE_WEBHOOK_WITHOUT_SESSION",
+      event.type,
+      event.id
+    );
 
-    // Registrado só depois do sucesso: se falhar, o
-    // Stripe reenvia e tentamos de novo.
-    await prisma.stripeWebhookEvent.upsert({
-      where: {
-        id: event.id,
-      },
-
-      create: {
-        id: event.id,
-        type: event.type,
-      },
-
-      update: {},
-    });
+    await markProcessed(event);
 
     return NextResponse.json({
       received: true,
+      ignored: true,
+    });
+  }
+
+  if (
+    event.type ===
+    FAILED_PAYMENT_EVENT
+  ) {
+    console.warn(
+      "STRIPE_ASYNC_PAYMENT_FAILED",
+      checkoutSessionId
+    );
+
+    await markProcessed(event);
+
+    return NextResponse.json({
+      received: true,
+    });
+  }
+
+  try {
+    const result =
+      await fulfillCheckoutSession(
+        checkoutSessionId
+      );
+
+    if (result.status === "rejected") {
+      console.warn(
+        "STRIPE_CHECKOUT_REJECTED",
+        checkoutSessionId,
+        result.reason
+      );
+    }
+
+    // "pending": pagamento assíncrono ainda não confirmado.
+    // O Stripe envia async_payment_succeeded depois (outro
+    // evento, outro id), então este pode ser marcado.
+    await markProcessed(event);
+
+    return NextResponse.json({
+      received: true,
+      result: result.status,
     });
   } catch (error) {
     console.error(
       "STRIPE_WEBHOOK_ERROR",
       event.type,
       event.id,
-      error
+      error instanceof Error
+        ? error.message
+        : error
     );
 
+    // Não marcado como processado: o Stripe reenvia.
     return NextResponse.json(
       {
         error:

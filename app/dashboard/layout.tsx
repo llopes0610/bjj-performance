@@ -51,8 +51,8 @@ export default async function DashboardLayout({
   }
 
   /*
-   * Só pago: sem assinatura ativa, o atleta vai para
-   * a página de planos.
+   * Só pago: sem compra confirmada, o atleta vai para
+   * a página de compra (/plans).
    */
   if (
     !(await userHasAccess(

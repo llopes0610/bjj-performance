@@ -1,9 +1,9 @@
 /*
  * Cliente mínimo da API REST do Stripe (sem SDK).
  *
- * Só usamos clientes, sessões de checkout, portal do
- * cliente e leitura de assinaturas. A chave secreta fica
- * somente no servidor (STRIPE_SECRET_KEY).
+ * Só usamos o Checkout de pagamento único e a leitura de
+ * sessões e preços. A chave secreta fica somente no
+ * servidor (STRIPE_SECRET_KEY) e nunca vai para logs.
  */
 
 const STRIPE_API_URL =
@@ -154,35 +154,43 @@ async function stripeRequest<T>(
  * ========================================
  */
 
-export interface StripeSubscription {
-  id: string;
-  customer: string;
-  status: string;
-  cancel_at_period_end: boolean;
-
-  // Versões antigas da API trazem o fim do período
-  // na assinatura; as novas, em cada item.
-  current_period_end?: number | null;
-
-  items: {
-    data: {
-      price: {
-        id: string;
-      };
-      current_period_end?: number | null;
-    }[];
-  };
-
-  metadata?: Record<string, string>;
-}
-
 export interface StripeCheckoutSession {
   id: string;
   url: string | null;
-  customer: string | null;
-  subscription: string | null;
-  client_reference_id: string | null;
+  mode: string;
   status: string | null;
+  payment_status: string;
+
+  client_reference_id: string | null;
+  metadata: Record<string, string> | null;
+
+  customer: string | null;
+  payment_intent:
+    | string
+    | {
+        id: string;
+      }
+    | null;
+
+  amount_total: number | null;
+  currency: string | null;
+
+  line_items?: {
+    data: {
+      quantity: number | null;
+      price: {
+        id: string;
+      } | null;
+    }[];
+  };
+}
+
+export interface StripePrice {
+  id: string;
+  unit_amount: number | null;
+  currency: string;
+  type: string;
+  active: boolean;
 }
 
 /*
@@ -191,35 +199,20 @@ export interface StripeCheckoutSession {
  * ========================================
  */
 
-export function createStripeCustomer({
+/*
+ * Checkout de pagamento único. O usuário vem da sessão
+ * autenticada no servidor e vai em client_reference_id e
+ * nos metadados, para o webhook saber quem comprou.
+ */
+export function createPaymentCheckout({
+  userId,
   email,
-  name,
-  userId,
-}: {
-  email: string;
-  name?: string | null;
-  userId: string;
-}) {
-  return stripeRequest<{
-    id: string;
-  }>("POST", "/customers", {
-    email,
-    name: name ?? undefined,
-    metadata: {
-      userId,
-    },
-  });
-}
-
-export function createSubscriptionCheckout({
-  customerId,
-  userId,
   priceId,
   successUrl,
   cancelUrl,
 }: {
-  customerId: string;
   userId: string;
+  email: string;
   priceId: string;
   successUrl: string;
   cancelUrl: string;
@@ -228,9 +221,9 @@ export function createSubscriptionCheckout({
     "POST",
     "/checkout/sessions",
     {
-      mode: "subscription",
-      customer: customerId,
+      mode: "payment",
       client_reference_id: userId,
+      customer_email: email,
       locale: "pt-BR",
 
       line_items: [
@@ -240,7 +233,11 @@ export function createSubscriptionCheckout({
         },
       ],
 
-      subscription_data: {
+      metadata: {
+        userId,
+      },
+
+      payment_intent_data: {
         metadata: {
           userId,
         },
@@ -252,39 +249,27 @@ export function createSubscriptionCheckout({
   );
 }
 
-export function createBillingPortalSession({
-  customerId,
-  returnUrl,
-}: {
-  customerId: string;
-  returnUrl: string;
-}) {
-  return stripeRequest<{
-    url: string;
-  }>(
-    "POST",
-    "/billing_portal/sessions",
-    {
-      customer: customerId,
-      return_url: returnUrl,
-    }
-  );
-}
-
-export function retrieveStripeSubscription(
-  subscriptionId: string
-) {
-  return stripeRequest<StripeSubscription>(
-    "GET",
-    `/subscriptions/${encodeURIComponent(subscriptionId)}`
-  );
-}
-
+/*
+ * Lê a sessão no Stripe com os itens, para conferir o
+ * preço pago (o corpo do webhook não traz line_items).
+ */
 export function retrieveCheckoutSession(
   sessionId: string
 ) {
   return stripeRequest<StripeCheckoutSession>(
     "GET",
-    `/checkout/sessions/${encodeURIComponent(sessionId)}`
+    `/checkout/sessions/${encodeURIComponent(sessionId)}`,
+    {
+      expand: ["line_items"],
+    }
+  );
+}
+
+export function retrieveStripePrice(
+  priceId: string
+) {
+  return stripeRequest<StripePrice>(
+    "GET",
+    `/prices/${encodeURIComponent(priceId)}`
   );
 }

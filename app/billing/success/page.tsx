@@ -8,9 +8,8 @@ import {
 } from "lucide-react";
 
 import { auth } from "@/lib/auth";
-import { hasActiveAccess } from "@/lib/billing/access";
-import { retrieveCheckoutSession } from "@/lib/billing/stripe";
-import { syncStripeSubscription } from "@/lib/billing/subscription-sync";
+import { fulfillCheckoutSession } from "@/lib/billing/fulfill-checkout";
+import { userHasAccess } from "@/lib/billing/get-access";
 import { prisma } from "@/lib/prisma";
 
 interface BillingSuccessPageProps {
@@ -20,9 +19,10 @@ interface BillingSuccessPageProps {
 }
 
 /*
- * Retorno do checkout. Sincroniza a assinatura na hora
- * (sem esperar o webhook), conferindo que a sessão de
- * checkout pertence ao usuário logado.
+ * Retorno do Checkout. Registra a compra na hora (sem
+ * esperar o webhook), aceitando só a sessão do próprio
+ * usuário logado. O webhook faz o mesmo registro; os dois
+ * juntos resultam em uma única compra.
  */
 export default async function BillingSuccessPage({
   searchParams,
@@ -61,43 +61,36 @@ export default async function BillingSuccessPage({
     )
   ) {
     try {
-      const checkout =
-        await retrieveCheckoutSession(
-          checkoutSessionId
+      const result =
+        await fulfillCheckoutSession(
+          checkoutSessionId,
+          {
+            expectedUserId: user.id,
+          }
         );
 
-      if (
-        checkout.client_reference_id ===
-          user.id &&
-        checkout.subscription
-      ) {
-        await syncStripeSubscription(
-          checkout.subscription
+      if (result.status === "rejected") {
+        console.warn(
+          "BILLING_SUCCESS_REJECTED",
+          checkoutSessionId,
+          result.reason
         );
       }
     } catch (error) {
-      // O webhook ainda vai atualizar a assinatura.
+      // O webhook ainda vai registrar a compra.
       console.error(
-        "BILLING_SUCCESS_SYNC_ERROR",
-        error
+        "BILLING_SUCCESS_FULFILL_ERROR",
+        error instanceof Error
+          ? error.message
+          : error
       );
     }
   }
 
-  const subscription =
-    await prisma.subscription.findUnique({
-      where: {
-        userId: user.id,
-      },
-
-      select: {
-        status: true,
-        currentPeriodEnd: true,
-      },
-    });
-
   const active =
-    hasActiveAccess(subscription);
+    await userHasAccess(
+      session.user.email
+    );
 
   const nextHref =
     user.onboardingCompleted
@@ -130,13 +123,13 @@ export default async function BillingSuccessPage({
 
         <h1 className="mt-5 text-xl font-bold">
           {active
-            ? "Assinatura confirmada!"
+            ? "Acesso liberado"
             : "Confirmando pagamento..."}
         </h1>
 
         <p className="mt-2 text-sm leading-6 text-muted">
           {active
-            ? "Tudo pronto. Bons treinos!"
+            ? "Compra confirmada. Bons treinos!"
             : "O Stripe ainda está confirmando seu pagamento. Isso costuma levar poucos segundos."}
         </p>
 
@@ -146,7 +139,7 @@ export default async function BillingSuccessPage({
             className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-white transition hover:bg-primary-hover"
           >
             {user.onboardingCompleted
-              ? "Ir para o app"
+              ? "Ir para o BJJ Performance"
               : "Montar meu perfil"}
             <ArrowRight
               size={18}

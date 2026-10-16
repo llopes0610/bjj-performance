@@ -1,54 +1,29 @@
 /*
- * Regra de acesso do BJJ Performance (só pago).
+ * Regra de acesso do BJJ Performance.
  *
- * Tem acesso quem tem assinatura ativa no Stripe. Enquanto o
- * Stripe tenta cobrar de novo (past_due), o acesso continua.
- * Uma assinatura cancelada mantém o acesso até o fim do
- * período já pago.
+ * Pagamento único: quem tem uma compra com status "paid"
+ * tem acesso permanente ao produto. Não há assinatura,
+ * renovação nem cancelamento.
  */
 
-export interface SubscriptionAccessInput {
+export const PAID_PURCHASE_STATUS =
+  "paid";
+
+export interface PurchaseAccessInput {
   status: string;
-  currentPeriodEnd: Date | null;
 }
 
-const ACTIVE_STATUSES = new Set([
-  "active",
-  "trialing",
-  "past_due",
-]);
-
-export function hasActiveAccess(
-  subscription:
-    | SubscriptionAccessInput
+export function hasPaidAccess(
+  purchases:
+    | readonly PurchaseAccessInput[]
     | null
-    | undefined,
-  now: Date = new Date()
+    | undefined
 ): boolean {
-  if (!subscription) {
-    return false;
-  }
-
-  if (
-    ACTIVE_STATUSES.has(
-      subscription.status
-    )
-  ) {
-    return true;
-  }
-
-  if (
-    subscription.status ===
-      "canceled" &&
-    subscription.currentPeriodEnd
-  ) {
-    return (
-      subscription.currentPeriodEnd.getTime() >
-      now.getTime()
-    );
-  }
-
-  return false;
+  return (purchases ?? []).some(
+    (purchase) =>
+      purchase.status ===
+      PAID_PURCHASE_STATUS
+  );
 }
 
 /*
@@ -60,23 +35,4 @@ export function isBillingEnabled(
   env: Record<string, string | undefined> = process.env
 ) {
   return env.BILLING_ENABLED === "true";
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  active: "Ativa",
-  trialing: "Em teste",
-  past_due: "Pagamento pendente",
-  canceled: "Cancelada",
-  unpaid: "Não paga",
-  incomplete: "Aguardando pagamento",
-  incomplete_expired: "Expirada",
-  paused: "Pausada",
-};
-
-export function formatSubscriptionStatus(
-  status: string
-) {
-  return (
-    STATUS_LABELS[status] ?? status
-  );
 }

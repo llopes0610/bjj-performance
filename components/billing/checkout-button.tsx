@@ -5,24 +5,19 @@ import { useState } from "react";
 import {
   CreditCard,
   LoaderCircle,
-  Settings,
 } from "lucide-react";
 
-interface BillingRedirectButtonProps {
-  action: "checkout" | "portal";
-  label: string;
-  variant?: "primary" | "secondary";
+interface CheckoutButtonProps {
+  label?: string;
 }
 
 /*
- * Pede ao servidor a URL do Stripe (checkout ou portal do
- * cliente) e abre no mesmo navegador.
+ * Pede ao servidor a URL do Checkout do Stripe (compra
+ * única) e abre no mesmo navegador.
  */
-export function BillingRedirectButton({
-  action,
-  label,
-  variant = "primary",
-}: BillingRedirectButtonProps) {
+export function CheckoutButton({
+  label = "Comprar acesso",
+}: CheckoutButtonProps) {
   const [loading, setLoading] =
     useState(false);
 
@@ -40,7 +35,7 @@ export function BillingRedirectButton({
 
     try {
       const response = await fetch(
-        `/api/billing/${action}`,
+        "/api/billing/checkout",
         {
           method: "POST",
         }
@@ -69,23 +64,13 @@ export function BillingRedirectButton({
     }
   }
 
-  const Icon =
-    action === "checkout"
-      ? CreditCard
-      : Settings;
-
   return (
     <div>
       <button
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className={[
-          "flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60",
-          variant === "primary"
-            ? "bg-primary text-white hover:bg-primary-hover"
-            : "border border-border text-foreground hover:border-primary/40",
-        ].join(" ")}
+        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-white transition hover:bg-primary-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? (
           <LoaderCircle
@@ -94,7 +79,7 @@ export function BillingRedirectButton({
             aria-hidden="true"
           />
         ) : (
-          <Icon
+          <CreditCard
             size={18}
             aria-hidden="true"
           />

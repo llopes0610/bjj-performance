@@ -2,65 +2,28 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-  hasActiveAccess,
+  hasPaidAccess,
   isBillingEnabled,
 } from "./access";
-import { mapStripeSubscription } from "./map-subscription";
+import { evaluateCheckoutSession } from "./checkout-validation";
+import { formatMoney } from "./plan";
+import type { StripeCheckoutSession } from "./stripe";
 import { encodeStripeParams } from "./stripe";
 import {
   computeStripeSignature,
   verifyStripeSignature,
 } from "./stripe-signature";
 
-const NOW = new Date("2026-10-15T12:00:00Z");
-
-describe("hasActiveAccess", () => {
-  it("libera assinatura ativa, em teste ou com pagamento pendente", () => {
-    for (const status of ["active", "trialing", "past_due"]) {
-      assert.equal(
-        hasActiveAccess({ status, currentPeriodEnd: null }, NOW),
-        true,
-        status
-      );
-    }
+describe("hasPaidAccess", () => {
+  it("libera com pelo menos uma compra paga", () => {
+    assert.equal(hasPaidAccess([{ status: "paid" }]), true);
+    assert.equal(hasPaidAccess([{ status: "refunded" }, { status: "paid" }]), true);
   });
 
-  it("mantém o acesso de cancelada até o fim do período pago", () => {
-    assert.equal(
-      hasActiveAccess(
-        { status: "canceled", currentPeriodEnd: new Date("2026-10-20T00:00:00Z") },
-        NOW
-      ),
-      true
-    );
-
-    assert.equal(
-      hasActiveAccess(
-        { status: "canceled", currentPeriodEnd: new Date("2026-10-10T00:00:00Z") },
-        NOW
-      ),
-      false
-    );
-
-    assert.equal(
-      hasActiveAccess({ status: "canceled", currentPeriodEnd: null }, NOW),
-      false
-    );
-  });
-
-  it("bloqueia sem assinatura ou com pagamento não concluído", () => {
-    assert.equal(hasActiveAccess(null, NOW), false);
-
-    for (const status of ["incomplete", "incomplete_expired", "unpaid", "paused"]) {
-      assert.equal(
-        hasActiveAccess(
-          { status, currentPeriodEnd: new Date("2026-11-15T00:00:00Z") },
-          NOW
-        ),
-        false,
-        status
-      );
-    }
+  it("bloqueia sem compra ou sem compra paga", () => {
+    assert.equal(hasPaidAccess(null), false);
+    assert.equal(hasPaidAccess([]), false);
+    assert.equal(hasPaidAccess([{ status: "refunded" }]), false);
   });
 });
 
@@ -74,7 +37,7 @@ describe("isBillingEnabled", () => {
 
 describe("verifyStripeSignature", () => {
   const secret = "whsec_test_secret";
-  const payload = JSON.stringify({ id: "evt_1", type: "customer.subscription.updated" });
+  const payload = JSON.stringify({ id: "evt_1", type: "checkout.session.completed" });
   const timestamp = 1_760_000_000;
   const signature = computeStripeSignature(payload, timestamp, secret);
 
@@ -147,7 +110,7 @@ describe("verifyStripeSignature", () => {
 describe("encodeStripeParams", () => {
   it("codifica objetos e listas aninhados como o Stripe espera", () => {
     const encoded = encodeStripeParams({
-      mode: "subscription",
+      mode: "payment",
       line_items: [{ price: "price_123", quantity: 1 }],
       metadata: { userId: "u 1" },
       ignored: undefined,
@@ -155,41 +118,81 @@ describe("encodeStripeParams", () => {
 
     assert.equal(
       decodeURIComponent(encoded),
-      "mode=subscription&line_items[0][price]=price_123&line_items[0][quantity]=1&metadata[userId]=u 1"
+      "mode=payment&line_items[0][price]=price_123&line_items[0][quantity]=1&metadata[userId]=u 1"
     );
   });
 });
 
-describe("mapStripeSubscription", () => {
-  const base = {
-    id: "sub_123",
-    customer: "cus_123",
-    status: "active",
-    cancel_at_period_end: false,
-    items: {
-      data: [{ price: { id: "price_123" }, current_period_end: 1_762_000_000 }],
+describe("evaluateCheckoutSession", () => {
+  const PRICE = "price_unico";
+
+  const paid: StripeCheckoutSession = {
+    id: "cs_test_123",
+    url: null,
+    mode: "payment",
+    status: "complete",
+    payment_status: "paid",
+    client_reference_id: "user_1",
+    metadata: { userId: "user_1" },
+    customer: null,
+    payment_intent: "pi_123",
+    amount_total: 9790,
+    currency: "brl",
+    line_items: {
+      data: [{ quantity: 1, price: { id: PRICE } }],
     },
   };
 
-  it("lê o fim do período do item (API nova)", () => {
-    const result = mapStripeSubscription(base);
-
-    assert.equal(result.stripeCustomerId, "cus_123");
-    assert.equal(result.stripeSubscriptionId, "sub_123");
-    assert.equal(result.stripePriceId, "price_123");
-    assert.equal(result.status, "active");
-    assert.equal(result.currentPeriodEnd?.getTime(), 1_762_000_000_000);
-    assert.equal(result.cancelAtPeriodEnd, false);
+  it("aceita sessão paga, de pagamento único e com o preço esperado", () => {
+    assert.deepEqual(evaluateCheckoutSession(paid, PRICE), {
+      kind: "paid",
+      purchase: {
+        userId: "user_1",
+        stripeCheckoutSessionId: "cs_test_123",
+        stripePaymentIntentId: "pi_123",
+        stripeCustomerId: null,
+        stripePriceId: PRICE,
+        amountTotal: 9790,
+        currency: "brl",
+      },
+    });
   });
 
-  it("prefere o fim do período da assinatura (API antiga)", () => {
-    const result = mapStripeSubscription({
-      ...base,
-      current_period_end: 1_761_000_000,
-      cancel_at_period_end: true,
-    });
+  it("lê o payment_intent expandido", () => {
+    const result = evaluateCheckoutSession(
+      { ...paid, payment_intent: { id: "pi_456" } },
+      PRICE
+    );
 
-    assert.equal(result.currentPeriodEnd?.getTime(), 1_761_000_000_000);
-    assert.equal(result.cancelAtPeriodEnd, true);
+    assert.equal(result.kind === "paid" && result.purchase.stripePaymentIntentId, "pi_456");
+  });
+
+  it("aguarda pagamento assíncrono não confirmado", () => {
+    assert.deepEqual(
+      evaluateCheckoutSession({ ...paid, payment_status: "unpaid" }, PRICE),
+      { kind: "pending" }
+    );
+  });
+
+  it("recusa assinatura, outro preço, usuário ausente ou divergente", () => {
+    const cases: StripeCheckoutSession[] = [
+      { ...paid, mode: "subscription" },
+      { ...paid, line_items: { data: [{ quantity: 1, price: { id: "price_outro" } }] } },
+      { ...paid, line_items: undefined },
+      { ...paid, client_reference_id: null },
+      { ...paid, metadata: { userId: "user_2" } },
+      { ...paid, payment_status: "no_payment_required" },
+      { ...paid, amount_total: null },
+    ];
+
+    for (const session of cases) {
+      assert.equal(evaluateCheckoutSession(session, PRICE).kind, "rejected");
+    }
+  });
+});
+
+describe("formatMoney", () => {
+  it("formata centavos em reais", () => {
+    assert.equal(formatMoney(9790, "brl").replace(/\s/g, " "), "R$ 97,90");
   });
 });

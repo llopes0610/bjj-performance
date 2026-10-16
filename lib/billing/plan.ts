@@ -1,12 +1,16 @@
+import {
+  retrieveStripePrice,
+  StripeConfigError,
+} from "./stripe";
+
 /*
- * Dados de exibição do plano. O valor cobrado de fato é o
- * do preço configurado no Stripe (STRIPE_PRICE_ID); mantenha
- * os dois iguais.
+ * Oferta do BJJ Performance: pagamento único com acesso
+ * permanente. O valor exibido vem do Price no Stripe
+ * (STRIPE_PRICE_ID), que é a fonte da verdade.
  */
-export const MONTHLY_PLAN = {
+export const PRODUCT_OFFER = {
   name: "BJJ Performance",
-  priceLabel: "R$ 97,90",
-  periodLabel: "por mês",
+  paymentLabel: "Pagamento único",
 
   features: [
     "Programa de preparação física individual para o seu Jiu-Jitsu",
@@ -16,3 +20,56 @@ export const MONTHLY_PLAN = {
     "Histórico, evolução, níveis e conquistas",
   ],
 } as const;
+
+export function formatMoney(
+  amountInCents: number,
+  currency: string
+) {
+  return new Intl.NumberFormat(
+    "pt-BR",
+    {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }
+  ).format(amountInCents / 100);
+}
+
+/*
+ * Preço formatado (ex.: "R$ 97,90") ou null se o Stripe
+ * não estiver configurado ou não responder.
+ */
+export async function getOfferPriceLabel(
+  priceId: string | undefined =
+    process.env.STRIPE_PRICE_ID
+) {
+  if (!priceId) {
+    return null;
+  }
+
+  try {
+    const price =
+      await retrieveStripePrice(priceId);
+
+    if (price.unit_amount === null) {
+      return null;
+    }
+
+    return formatMoney(
+      price.unit_amount,
+      price.currency
+    );
+  } catch (error) {
+    if (
+      !(error instanceof StripeConfigError)
+    ) {
+      console.error(
+        "STRIPE_PRICE_ERROR",
+        error instanceof Error
+          ? error.message
+          : error
+      );
+    }
+
+    return null;
+  }
+}

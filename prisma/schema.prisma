@@ -229,7 +229,7 @@ model User {
   onboardingCompleted Boolean @default(false)
 
   athleteProfile AthleteProfile?
-  subscription   Subscription?
+  purchases      Purchase[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -666,31 +666,36 @@ model AthleteAchievement {
 
 /*
  * ========================================
- * ASSINATURA (STRIPE)
+ * COMPRA (STRIPE, PAGAMENTO ÚNICO)
  * ========================================
  *
- * O status espelha o da assinatura no Stripe
- * (active, past_due, canceled, incomplete...).
- * Só o webhook e a sincronização pós-checkout
- * alteram estes dados.
+ * Cada compra confirmada do BJJ Performance. Ter uma
+ * compra com status "paid" dá acesso ao app. A sessão de
+ * checkout do Stripe é a chave de idempotência: o mesmo
+ * pagamento nunca gera duas linhas.
  */
-model Subscription {
+model Purchase {
   id     String @id @default(cuid())
-  userId String @unique
+  userId String
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  stripeCustomerId     String  @unique
-  stripeSubscriptionId String? @unique
-  stripePriceId        String?
+  stripeCheckoutSessionId String  @unique
+  stripePaymentIntentId   String? @unique
+  stripeCustomerId        String?
+  stripePriceId           String
 
-  status String @default("incomplete")
+  amountTotal Int
+  currency    String
 
-  currentPeriodEnd  DateTime?
-  cancelAtPeriodEnd Boolean   @default(false)
+  status String @default("paid")
+
+  paidAt DateTime
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
 }
 
 /*
