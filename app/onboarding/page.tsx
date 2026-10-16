@@ -4,6 +4,7 @@ import { Dumbbell } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { userHasAccess } from "@/lib/billing/get-access";
 
 import { OnboardingForm } from "@/components/onboarding/onboarding-form";
 
@@ -27,6 +28,18 @@ export default async function OnboardingPage() {
 
   if (user?.onboardingCompleted) {
     redirect("/dashboard");
+  }
+
+  /*
+   * Só pago: sem compra confirmada, o atleta vai para
+   * a página de compra (/plans).
+   */
+  if (
+    !(await userHasAccess(
+      session.user.email
+    ))
+  ) {
+    redirect("/plans");
   }
 
   return (

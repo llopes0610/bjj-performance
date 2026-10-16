@@ -229,6 +229,7 @@ model User {
   onboardingCompleted Boolean @default(false)
 
   athleteProfile AthleteProfile?
+  purchases      Purchase[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -661,4 +662,48 @@ model AthleteAchievement {
 
   @@unique([athleteId, achievementId])
   @@index([athleteId, unlockedAt])
+}
+
+/**
+ * ========================================
+ * COMPRA (STRIPE, PAGAMENTO ÚNICO)
+ * ========================================
+ * Cada compra confirmada do BJJ Performance. Ter uma
+ * compra com status "paid" dá acesso ao app. A sessão de
+ * checkout do Stripe é a chave de idempotência: o mesmo
+ * pagamento nunca gera duas linhas.
+ */
+model Purchase {
+  id     String @id @default(cuid())
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripeCheckoutSessionId String  @unique
+  stripePaymentIntentId   String? @unique
+  stripeCustomerId        String?
+  stripePriceId           String
+
+  amountTotal Int
+  currency    String
+
+  status String @default("paid")
+
+  paidAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+}
+
+/**
+ * Eventos do webhook já processados, para que um
+ * reenvio do Stripe não seja aplicado duas vezes.
+ */
+model StripeWebhookEvent {
+  id   String @id
+  type String
+
+  processedAt DateTime @default(now())
 }

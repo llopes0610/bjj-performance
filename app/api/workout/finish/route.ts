@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
+import {
+  paymentRequiredResponseBody,
+  userHasAccess,
+} from "@/lib/billing/get-access";
 import { prisma } from "@/lib/prisma";
 import { completeWorkoutSession } from "@/lib/workout/complete-workout-session";
 
@@ -56,6 +60,19 @@ export async function POST(
         },
         {
           status: 401,
+        }
+      );
+    }
+
+    if (
+      !(await userHasAccess(
+        session.user.email
+      ))
+    ) {
+      return NextResponse.json(
+        paymentRequiredResponseBody(),
+        {
+          status: 402,
         }
       );
     }
@@ -459,4 +476,4 @@ export async function POST(
       }
     );
   }
-}
+}

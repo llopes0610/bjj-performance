@@ -21,6 +21,8 @@ import { StepGoals } from "./step-goals";
 import { StepRestrictions } from "./step-restrictions";
 import { StepPreferences } from "./step-preferences";
 
+import { ProgramUpdatePrompt } from "@/components/profile/program-update-prompt";
+
 import { OnboardingData } from "@/types/onboarding";
 
 const TOTAL_STEPS = 6;
@@ -51,16 +53,35 @@ const initialData: OnboardingData = {
   trainingPreferences: [],
 };
 
-export function OnboardingForm() {
+interface OnboardingFormProps {
+  /*
+   * "edit" reaproveita o formulário para editar o
+   * perfil: começa preenchido e volta para /profile.
+   */
+  mode?: "create" | "edit";
+  initialValues?: OnboardingData;
+}
+
+export function OnboardingForm({
+  mode = "create",
+  initialValues,
+}: OnboardingFormProps = {}) {
   const router = useRouter();
+
+  const isEdit = mode === "edit";
 
   const [step, setStep] =
     useState(1);
 
   const [data, setData] =
     useState<OnboardingData>(
-      initialData
+      initialValues ?? initialData
     );
+
+  const [programPrompt, setProgramPrompt] =
+    useState<{
+      restrictionsChanged: boolean;
+    } | null>(null);
 
   const [error, setError] =
     useState("");
@@ -231,7 +252,27 @@ export function OnboardingForm() {
         return;
       }
 
-      router.push("/dashboard");
+      if (!isEdit) {
+        router.push("/dashboard");
+        router.refresh();
+        return;
+      }
+
+      if (
+        result.trainingChanged &&
+        result.hasActiveProgram
+      ) {
+        setProgramPrompt({
+          restrictionsChanged:
+            Boolean(
+              result.restrictionsChanged
+            ),
+        });
+
+        return;
+      }
+
+      router.push("/profile");
       router.refresh();
     } catch {
       setError(
@@ -363,7 +404,9 @@ export function OnboardingForm() {
               ) : (
                 <>
                   <span className="whitespace-nowrap">
-                    Criar meu perfil
+                    {isEdit
+                      ? "Salvar alterações"
+                      : "Criar meu perfil"}
                   </span>
 
                   <ArrowRight
@@ -376,6 +419,14 @@ export function OnboardingForm() {
           )}
         </div>
       </div>
+
+      {programPrompt && (
+        <ProgramUpdatePrompt
+          restrictionsChanged={
+            programPrompt.restrictionsChanged
+          }
+        />
+      )}
     </div>
   );
 }

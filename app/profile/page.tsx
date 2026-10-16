@@ -2,22 +2,33 @@ import {
   Activity,
   ArrowRight,
   Award,
+  CreditCard,
   CalendarDays,
   Dumbbell,
   Flame,
   Medal,
+  Pencil,
   Ruler,
   Scale,
   ShieldCheck,
   Sparkles,
   Target,
   UserRound,
+  UserCog,
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AppNavigation } from "@/components/navigation/app-navigation";
+import { AccountSettings } from "@/components/profile/account-settings";
+import { SignOutButton } from "@/components/profile/sign-out-button";
 import { auth } from "@/lib/auth";
+import {
+  hasPaidAccess,
+  isBillingEnabled,
+  PAID_PURCHASE_STATUS,
+} from "@/lib/billing/access";
+import { formatMoney } from "@/lib/billing/plan";
 import { calculateLevel } from "@/lib/gamification/calculate-level";
 import { prisma } from "@/lib/prisma";
 
@@ -40,6 +51,24 @@ export default async function ProfilePage() {
         email: true,
         onboardingCompleted:
           true,
+
+        purchases: {
+          where: {
+            status:
+              PAID_PURCHASE_STATUS,
+          },
+
+          orderBy: {
+            paidAt: "asc",
+          },
+
+          select: {
+            status: true,
+            paidAt: true,
+            amountTotal: true,
+            currency: true,
+          },
+        },
 
         athleteProfile: {
           select: {
@@ -216,6 +245,17 @@ export default async function ProfilePage() {
                 </div>
               </div>
             </div>
+
+            <Link
+              href="/profile/edit"
+              className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-primary-hover active:scale-[0.98] sm:inline-flex sm:w-auto sm:px-5"
+            >
+              <Pencil
+                size={17}
+                aria-hidden="true"
+              />
+              Editar perfil
+            </Link>
           </header>
 
           {/* ================================= */}
@@ -589,9 +629,133 @@ export default async function ProfilePage() {
               </div>
             </div>
           </section>
+
+          {/* ================================= */}
+          {/* MEU ACESSO */}
+          {/* ================================= */}
+
+          {(isBillingEnabled() ||
+            user.purchases.length >
+              0) && (
+            <AccessSection
+              purchases={
+                user.purchases
+              }
+            />
+          )}
+
+          {/* ================================= */}
+          {/* CONTA */}
+          {/* ================================= */}
+
+          <ProfileSection
+            icon={
+              <UserCog
+                size={21}
+              />
+            }
+            eyebrow="Configurações"
+            title="Conta"
+          >
+            <AccountSettings
+              name={
+                user.name ?? ""
+              }
+              email={user.email}
+            />
+
+            <div className="mt-5 border-t border-border pt-5">
+              <SignOutButton />
+            </div>
+          </ProfileSection>
         </div>
       </main>
     </AppNavigation>
+  );
+}
+
+/*
+ * ========================================
+ * MEU ACESSO (PAGAMENTO ÚNICO)
+ * ========================================
+ */
+
+function AccessSection({
+  purchases,
+}: {
+  purchases: {
+    status: string;
+    paidAt: Date;
+    amountTotal: number;
+    currency: string;
+  }[];
+}) {
+  const active =
+    hasPaidAccess(purchases);
+
+  // A primeira compra paga é a que liberou o acesso.
+  const purchase = purchases[0];
+
+  return (
+    <ProfileSection
+      icon={
+        <CreditCard
+          size={21}
+        />
+      }
+      eyebrow="BJJ Performance"
+      title="Meu acesso"
+    >
+      {active && purchase ? (
+        <div className="grid grid-cols-2 gap-3">
+          <InformationCard
+            label="Status"
+            value="Acesso ativo"
+          />
+
+          <InformationCard
+            label="Pagamento"
+            value="Pagamento único"
+          />
+
+          <InformationCard
+            label="Data da compra"
+            value={new Intl.DateTimeFormat(
+              "pt-BR",
+              {
+                dateStyle: "medium",
+                timeZone:
+                  "America/Sao_Paulo",
+              }
+            ).format(
+              purchase.paidAt
+            )}
+          />
+
+          <InformationCard
+            label="Valor pago"
+            value={formatMoney(
+              purchase.amountTotal,
+              purchase.currency
+            )}
+          />
+        </div>
+      ) : (
+        <>
+          <p className="text-sm leading-6 text-muted">
+            Você ainda não comprou o
+            acesso ao BJJ Performance.
+          </p>
+
+          <Link
+            href="/plans"
+            className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl bg-primary px-5 py-3 font-semibold text-white transition hover:bg-primary-hover"
+          >
+            Comprar acesso
+          </Link>
+        </>
+      )}
+    </ProfileSection>
   );
 }
 
@@ -862,4 +1026,4 @@ function formatPreference(
     default:
       return preference;
   }
-}
+}

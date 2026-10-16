@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getTrainingProfileChanges } from "@/lib/profile/training-profile-changes";
 
 const weekDaySchema = z.enum([
   "MONDAY",
@@ -168,6 +169,50 @@ export async function POST(
         }
       );
     }
+
+    /*
+     * Numa edição de perfil (atleta já existente),
+     * informamos se algo que afeta o programa mudou e
+     * se há programa ativo, para a tela perguntar se o
+     * atleta quer gerar um novo programa.
+     *
+     * A leitura fica fora da transação para não
+     * alongá-la (o banco remoto tem latência alta).
+     */
+    const previousProfile =
+      await prisma.athleteProfile.findUnique({
+        where: {
+          userId: user.id,
+        },
+
+        include: {
+          goalPriorities: true,
+          restrictions: true,
+
+          trainingPrograms: {
+            where: {
+              status: "ACTIVE",
+            },
+
+            select: {
+              id: true,
+            },
+
+            take: 1,
+          },
+        },
+      });
+
+    const changes = previousProfile
+      ? getTrainingProfileChanges(
+          previousProfile,
+          data
+        )
+      : null;
+
+    const hasActiveProgram =
+      (previousProfile?.trainingPrograms
+        .length ?? 0) > 0;
 
     await prisma.$transaction(
       async (tx) => {
@@ -346,6 +391,12 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
+      trainingChanged:
+        changes?.changed ?? false,
+      restrictionsChanged:
+        changes?.restrictionsChanged ??
+        false,
+      hasActiveProgram,
     });
   } catch (error) {
     console.error(

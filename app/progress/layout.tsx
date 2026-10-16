@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppNavigation } from "@/components/navigation/app-navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { userHasAccess } from "@/lib/billing/get-access";
 
 type ProgressLayoutProps = {
   children: ReactNode;
@@ -49,6 +50,18 @@ export default async function ProgressLayout({
     redirect("/onboarding");
   }
 
+  /*
+   * Só pago: sem compra confirmada, o atleta vai para
+   * a página de compra (/plans).
+   */
+  if (
+    !(await userHasAccess(
+      session.user.email
+    ))
+  ) {
+    redirect("/plans");
+  }
+
   return (
     <AppNavigation
       athleteName={
@@ -62,4 +75,4 @@ export default async function ProgressLayout({
       </div>
     </AppNavigation>
   );
-}
+}
