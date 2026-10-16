@@ -8,16 +8,19 @@ const registerSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(2, "Informe seu nome."),
+    .min(2, "Informe seu nome.")
+    .max(60, "Use no máximo 60 caracteres."),
 
   email: z
     .string()
     .trim()
+    .max(254, "Informe um e-mail válido.")
     .email("Informe um e-mail válido."),
 
   password: z
     .string()
-    .min(8, "A senha precisa ter pelo menos 8 caracteres."),
+    .min(8, "A senha precisa ter pelo menos 8 caracteres.")
+    .max(128, "Use no máximo 128 caracteres."),
 });
 
 export async function POST(request: Request) {

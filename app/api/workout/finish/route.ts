@@ -77,8 +77,19 @@ export async function POST(
       );
     }
 
-    const body =
-      (await request.json()) as FinishWorkoutBody;
+    /*
+     * JSON inválido ou vazio vira objeto vazio e cai
+     * nas validações abaixo (400), em vez de erro 500.
+     */
+    const rawBody: unknown = await request
+      .json()
+      .catch(() => null);
+
+    const body = (
+      rawBody && typeof rawBody === "object"
+        ? rawBody
+        : {}
+    ) as FinishWorkoutBody;
 
     const workoutSessionId =
       body.workoutSessionId;

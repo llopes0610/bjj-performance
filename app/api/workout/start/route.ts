@@ -38,8 +38,9 @@ export async function POST(
       );
     }
 
-    const body =
-      await request.json();
+    const body = await request
+      .json()
+      .catch(() => null);
 
     const workoutId =
       body?.workoutId;

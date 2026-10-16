@@ -7,6 +7,11 @@ import {
 } from "@/lib/billing/get-access";
 import { prisma } from "@/lib/prisma";
 
+/*
+ * Limite de sanidade para a carga de uma série.
+ */
+const MAX_WEIGHT_KG = 500;
+
 export async function POST(
   request: Request
 ) {
@@ -38,8 +43,9 @@ export async function POST(
       );
     }
 
-    const body =
-      await request.json();
+    const body = await request
+      .json()
+      .catch(() => null);
 
     const setId =
       body?.setId;
@@ -184,7 +190,9 @@ export async function POST(
         (!Number.isFinite(
           parsedWeight
         ) ||
-          parsedWeight < 0)
+          parsedWeight < 0 ||
+          parsedWeight >
+            MAX_WEIGHT_KG)
       ) {
         return NextResponse.json(
           {
@@ -268,7 +276,9 @@ export async function POST(
         (!Number.isFinite(
           parsedWeight
         ) ||
-          parsedWeight < 0)
+          parsedWeight < 0 ||
+          parsedWeight >
+            MAX_WEIGHT_KG)
       ) {
         return NextResponse.json(
           {
@@ -332,7 +342,9 @@ export async function POST(
         (!Number.isFinite(
           parsedWeight
         ) ||
-          parsedWeight < 0)
+          parsedWeight < 0 ||
+          parsedWeight >
+            MAX_WEIGHT_KG)
       ) {
         return NextResponse.json(
           {

@@ -10,7 +10,7 @@ export function analyzeAthlete(
 
   let recommendedStrengthDays: 2 | 3 = 3;
 
-  let baseRpeMin = 6;
+  const baseRpeMin = 6;
   let baseRpeMax = 7;
 
   let gripVolume: "LOW" | "MODERATE" | "HIGH" =
