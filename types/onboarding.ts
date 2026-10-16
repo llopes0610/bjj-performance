@@ -76,3 +76,12 @@ export interface OnboardingData {
 
   trainingPreferences: TrainingPreference[];
 }
+/*
+ * Limites do histórico de lesões/restrições.
+ * Usados no formulário e validados na API.
+ */
+export const RESTRICTION_LIMITS = {
+  maxItems: 10,
+  bodyAreaMaxLength: 60,
+  descriptionMaxLength: 300,
+} as const;

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getTrainingProfileChanges } from "@/lib/profile/training-profile-changes";
+import { RESTRICTION_LIMITS } from "@/types/onboarding";
 
 const weekDaySchema = z.enum([
   "MONDAY",
@@ -87,25 +88,41 @@ const onboardingSchema = z.object({
   goals:
     z.array(goalSchema).min(1),
 
-  goalPriorities: z.array(
-    z.object({
-      goal: goalSchema,
-      priority: z.number().int().min(1),
-    })
-  ),
+  goalPriorities: z
+    .array(
+      z.object({
+        goal: goalSchema,
+        priority: z.number().int().min(1).max(20),
+      })
+    )
+    .max(20),
 
-  restrictions: z.array(
-    z.object({
-      bodyArea: z.string().min(2),
-      description: z.string().min(2),
+  restrictions: z
+    .array(
+      z.object({
+        bodyArea: z
+          .string()
+          .trim()
+          .min(2)
+          .max(
+            RESTRICTION_LIMITS.bodyAreaMaxLength
+          ),
+        description: z
+          .string()
+          .trim()
+          .min(2)
+          .max(
+            RESTRICTION_LIMITS.descriptionMaxLength
+          ),
 
-      recovered: z.boolean(),
+        recovered: z.boolean(),
 
-      medicallyCleared: z.boolean(),
+        medicallyCleared: z.boolean(),
 
-      currentlyPainful: z.boolean(),
-    })
-  ),
+        currentlyPainful: z.boolean(),
+      })
+    )
+    .max(RESTRICTION_LIMITS.maxItems),
 
   trainingPreferences:
     z.array(preferenceSchema),
