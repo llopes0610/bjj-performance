@@ -197,10 +197,32 @@ export async function POST() {
         const nextWeek =
             currentWeek + 1;
 
-        await createWeekPrescriptions({
-            programId: program.id,
-            programWeek: nextWeek,
-        });
+        try {
+            await createWeekPrescriptions({
+                programId: program.id,
+                programWeek: nextWeek,
+            });
+        } catch (error) {
+            /*
+             * Sem prescrições, a semana não pode
+             * começar: desfaz o avanço (só se ninguém
+             * mexeu no programa nesse meio tempo) para
+             * o atleta tentar de novo.
+             */
+            await prisma.trainingProgram.updateMany({
+                where: {
+                    id: program.id,
+                    status: "ACTIVE",
+                    currentWeek: nextWeek,
+                },
+
+                data: {
+                    currentWeek,
+                },
+            });
+
+            throw error;
+        }
 
         return NextResponse.json({
             success: true,

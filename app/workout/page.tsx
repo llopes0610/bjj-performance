@@ -511,11 +511,16 @@ export default async function WorkoutPage() {
                 </p>
 
                 <p className="mt-1 text-xs leading-5 text-zinc-500">
-                  O próximo ciclo será
-                  definido a partir da
-                  evolução registrada neste
-                  programa.
+                  Gere o próximo programa
+                  para continuar treinando.
+                  Seu histórico, nível e
+                  sequência são mantidos.
                 </p>
+
+                <GenerateProgramButton
+                  label="Gerar próximo programa"
+                  className="mt-4 flex flex-col items-center"
+                />
               </div>
             )}
 

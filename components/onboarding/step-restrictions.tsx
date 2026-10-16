@@ -6,6 +6,7 @@ import {
 import {
   AthleteRestrictionInput,
   OnboardingData,
+  RESTRICTION_LIMITS,
 } from "@/types/onboarding";
 
 interface Props {
@@ -28,7 +29,15 @@ export function StepRestrictions({
   data,
   updateData,
 }: Props) {
+  const reachedLimit =
+    data.restrictions.length >=
+    RESTRICTION_LIMITS.maxItems;
+
   function addRestriction() {
+    if (reachedLimit) {
+      return;
+    }
+
     updateData({
       restrictions: [
         ...data.restrictions,
@@ -138,6 +147,9 @@ export function StepRestrictions({
                   )
                 }
                 placeholder="Região: ex. tíbia, ombro, lombar..."
+                maxLength={
+                  RESTRICTION_LIMITS.bodyAreaMaxLength
+                }
                 className="mt-4 w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
               />
 
@@ -156,6 +168,9 @@ export function StepRestrictions({
                   )
                 }
                 placeholder="Descreva brevemente o histórico"
+                maxLength={
+                  RESTRICTION_LIMITS.descriptionMaxLength
+                }
                 rows={3}
                 className="mt-3 w-full resize-none rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
               />
@@ -217,11 +232,20 @@ export function StepRestrictions({
       <button
         type="button"
         onClick={addRestriction}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-4 font-semibold text-muted transition hover:border-primary hover:text-foreground"
+        disabled={reachedLimit}
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-4 font-semibold text-muted transition hover:border-primary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:text-muted"
       >
         <Plus size={18} />
         Adicionar histórico
       </button>
+
+      {reachedLimit && (
+        <p className="mt-2 text-center text-xs text-muted">
+          Limite de{" "}
+          {RESTRICTION_LIMITS.maxItems}{" "}
+          registros atingido.
+        </p>
+      )}
     </div>
   );
 }
